@@ -1,0 +1,14 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/jnos/SYNC-Folder/CurrentWork/Docencia/25-26/2-PSIS/Laboratorios/Week 2 - Lab 3/Lab 3  - Code/Client-server-system",
+            "binaryPath": "/home/jnos/SYNC-Folder/CurrentWork/Docencia/25-26/2-PSIS/Laboratorios/Week 2 - Lab 3/Lab 3  - Code/Client-server-system/human-client",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/jnos/SYNC-Folder/CurrentWork/Docencia/25-26/2-PSIS/Laboratorios/Week 2 - Lab 3/Lab 3  - Code/Client-server-system",
+            "binaryPath": "/home/jnos/SYNC-Folder/CurrentWork/Docencia/25-26/2-PSIS/Laboratorios/Week 2 - Lab 3/Lab 3  - Code/Client-server-system/server",
+            "binaryArgs": []
+        }
+    ]
+}
