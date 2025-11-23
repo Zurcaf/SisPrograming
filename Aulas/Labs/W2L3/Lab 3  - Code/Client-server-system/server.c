@@ -9,6 +9,8 @@
 #include <string.h>
 #define WINDOW_SIZE 15 
 
+#include <zmq.h>
+
 // STEP 1
 typedef struct ch_info_t
 {
@@ -67,10 +69,14 @@ int main()
     ch_info_t char_data[100];
     int n_chars = 0;
 
+    // ADAPTAÇÂO PARA ZEROMQ
+    // int fd = create_server_channel();
+    
+    void *context = zmq_ctx_new();
+    void *socket = zmq_socket(context, ZMQ_PULL);
+    zmq_bind(socket, "tcp://*:5555"); // servidor escuta na porta 5555
 
-    int fd = create_server_channel();
-
-	initscr();		    	
+    initscr();		    	
 	cbreak();				
     keypad(stdscr, TRUE);   
 	noecho();			    

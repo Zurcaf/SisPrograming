@@ -1,6 +1,8 @@
 #include <ncurses.h>
 #include "comm-fifo.h"
-#include <ctype.h> 
+#include <ctype.h>
+#include <zmq.h>
+
 
 void initialize_screen(){
 	initscr();			/* Start curses mode 		*/
@@ -12,8 +14,15 @@ void initialize_screen(){
 
 
 int main(){
+    // -----------------------------
+    //  ZeroMQ INIT (PUSH socket)
+    // -----------------------------
+    void *context = zmq_ctx_new();
+    void *socket = zmq_socket(context, ZMQ_PUSH);
 
-    int fd = create_client_channel();
+    // Cliente conecta ao servidor
+    zmq_connect(socket, "tcp://localhost:5555");
+
 
     char ch;
     do{
@@ -22,7 +31,9 @@ int main(){
         ch = tolower(ch);  
     }while(!isalpha(ch));
 
-    send_connection_message(fd, ch);
+    // ALTERAÇÂO PARA ZEROMQ
+    // send_connection_message(fd, ch);
+    zmq_connect(socket, "tcp://localhost:5555");
 
     initialize_screen();
     int n = 0;
@@ -53,7 +64,6 @@ int main(){
             mvprintw(0,0,"%d :Up arrow is pressed", n);
             direction = UP;
             break;
-
         default:
             key = 'x'; 
             break;
@@ -61,7 +71,9 @@ int main(){
 
 
         if (key != 'x'){
-            send_movement_message(fd, ch, direction);
+            // send_movement_message(fd, ch, direction);
+            zmq_send(socket, msg, strlen(msg), 0);
+
         }
         refresh();			/* Print it on to the real screen */
     }while(key != 27);

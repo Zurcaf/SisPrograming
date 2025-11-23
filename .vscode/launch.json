@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": ".",
-      "program": "build/Debug/outDebug",
+      "cwd": "/home/zurc/documents/SisPrograming/Aulas/Labs/W2L3",
+      "program": "/home/zurc/documents/SisPrograming/Aulas/Labs/W2L3/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
