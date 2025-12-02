@@ -74,11 +74,7 @@ int main() {
             case SDL_USEREVENT:
                 if (event.user.code == 2){
                 //update_physics(trash, n_trash, planets, n_planets, width, height);
-<<<<<<< HEAD
                 update_display(win, rend, width, height);
-=======
-                update_display(rend);
->>>>>>> 66f7762f553ae90cd5fc08085c7dbcb8353c97b8
                 
             }
             break;   
