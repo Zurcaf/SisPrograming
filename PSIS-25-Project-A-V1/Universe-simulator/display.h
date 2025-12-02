@@ -6,7 +6,7 @@
 
 
 int init_display(const char *title, int width, int height);
-int destroy_display();
+int destroy_display(SDL_Window* window, SDL_Renderer* renderer);
 
 
 #endif

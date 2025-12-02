@@ -44,11 +44,12 @@ int main() {
     SDL_TimerID timer_id = 0;    
     timer_id = SDL_AddTimer(10, 
                 (SDL_TimerCallback)timer_callback, NULL);
+
     
     
     while (running) {
         SDL_Event event;
-        
+
 
         // Events management
         SDL_WaitEvent(&event);
@@ -64,6 +65,7 @@ int main() {
             case SDL_USEREVENT:
                 if (event.user.code == 2){
                 //update_physics(trash, n_trash, planets, n_planets, width, height);
+                update_display
                 
             }
             break;   
