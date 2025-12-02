@@ -44,9 +44,19 @@ int main() {
     trash_t *trash = init_trash(n_trash, width, height);
     planet_t *planets = init_planets(n_planets, width, height);
 
-    init_display("Universe Simulator", width, height);
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        printf("error initializing SDL: %s\n", SDL_GetError());
+        return -1;
+    }
 
+    SDL_Window* win = SDL_CreateWindow("Universe Simulator", SDL_WINDOWPOS_CENTERED,
+                           SDL_WINDOWPOS_CENTERED,
+                           width, height, 0);
+    if (!win) return -1;
     
+    SDL_Renderer* rend = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    if (!rend) return -1;
+
     SDL_TimerID timer_id = 0;    
     timer_id = SDL_AddTimer(10, 
                 (SDL_TimerCallback)timer_callback, NULL);
@@ -71,7 +81,7 @@ int main() {
             case SDL_USEREVENT:
                 if (event.user.code == 2){
                 //update_physics(trash, n_trash, planets, n_planets, width, height);
-                update_display
+                update_display(win, rend, width, height);
                 
             }
             break;   
