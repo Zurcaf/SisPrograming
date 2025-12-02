@@ -9,10 +9,6 @@
 #include "universe_data.h"
 #include "display.h"
 
-
-
-
-
 Uint32 timer_callback(Uint32 interval, void* param){
     SDL_Event timer_event;
     printf("Timer callback function\n");
@@ -25,8 +21,6 @@ Uint32 timer_callback(Uint32 interval, void* param){
     SDL_PushEvent(&timer_event);
     return interval; // to continue the timer
 } 
-
-
 
 int main() {
     if(load_config("../libconfig/init.conf") != 0) {
@@ -75,18 +69,21 @@ int main() {
 
             case SDL_QUIT: 
                 running = 0;
-                break;   
-
-
+                break;
+                
             case SDL_USEREVENT:
                 if (event.user.code == 2){
                 //update_physics(trash, n_trash, planets, n_planets, width, height);
+<<<<<<< HEAD
                 update_display(win, rend, width, height);
+=======
+                update_display(rend);
+>>>>>>> 66f7762f553ae90cd5fc08085c7dbcb8353c97b8
                 
             }
             break;   
         }
    }
-    destroy_display();
+    destroy_display(win, rend);
     return 0;
 }
