@@ -33,7 +33,7 @@ int init_display(const char *title, int width, int height);
     return 0;
 }
 
-int destroy_display()
+int destroy_display(SDL_Window* window, SDL_Renderer* renderer)
 {
     if (rend) SDL_DestroyRenderer(rend);
     if (win) SDL_DestroyWindow(win);
