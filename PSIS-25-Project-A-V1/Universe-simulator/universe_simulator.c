@@ -9,10 +9,6 @@
 #include "universe_data.h"
 #include "display.h"
 
-
-
-
-
 Uint32 timer_callback(Uint32 interval, void* param){
     SDL_Event timer_event;
     printf("Timer callback function\n");
@@ -25,8 +21,6 @@ Uint32 timer_callback(Uint32 interval, void* param){
     SDL_PushEvent(&timer_event);
     return interval; // to continue the timer
 } 
-
-
 
 int main() {
     if(load_config("../libconfig/init.conf") != 0) {
