@@ -10,9 +10,9 @@ LDFLAGS = `sdl2-config --libs` \
 LIBCONFIG_DIR = ../libconfig
 LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 
-SRC = universe_simulator.c #universe_data.c display.c physics-rules.c
+SRC = universe_simulator.c display.c universe_data.c #physics-rules.c 
 OBJ = $(SRC:.c=.o)
-BIN = universe_simulator.exe
+BIN = universe_simulator
 
 all: $(LIBCONFIG_OBJ) $(BIN)
 

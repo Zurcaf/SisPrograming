@@ -1,8 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
+#include <SDL2/SDL_timer.h>
+#include <SDL2/SDL.h>
+
 #include "config.h"
 #include "universe_data.h"
-#include <SDL2/SDL_timer.h>
+#include "display.h"
+
+
+
 
 
 Uint32 timer_callback(Uint32 interval, void* param){
@@ -31,26 +39,14 @@ int main() {
     int max_trash = get_max_n_trash_int();
     int n_trash = get_init_n_trash_int();
     int n_planets = get_n_planets();
-
-    
- 
-    
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        printf("error initializing SDL: %s\n", SDL_GetError());
-    }
-    SDL_Window* win = SDL_CreateWindow("Universe Simulator", // creates a window
-                        SDL_WINDOWPOS_CENTERED,
-                        SDL_WINDOWPOS_CENTERED,
-                        width, height, 0);
-
-    Uint32 render_flags = SDL_RENDERER_ACCELERATED;
-    SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
-
+    bool running = 1;
 
     trash_t *trash = init_trash(n_trash, width, height);
     planet_t *planets = init_planets(n_planets, width, height);
-    bool running = 1;
 
+    init_display("Universe Simulator", width, height);
+
+    
     SDL_TimerID timer_id = 0;    
     timer_id = SDL_AddTimer(10, 
                 (SDL_TimerCallback)timer_callback, NULL);
@@ -58,6 +54,7 @@ int main() {
     
     while (running) {
         SDL_Event event;
+        
 
         // Events management
         SDL_WaitEvent(&event);
@@ -72,12 +69,12 @@ int main() {
 
             case SDL_USEREVENT:
                 if (event.user.code == 2){
-                init_display
                 //update_physics(trash, n_trash, planets, n_planets, width, height);
                 
             }
             break;   
         }
    }
+    destroy_display();
     return 0;
 }
