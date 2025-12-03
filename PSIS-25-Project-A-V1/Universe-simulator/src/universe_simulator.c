@@ -8,7 +8,7 @@
 #include "config.h"
 #include "../head/universe_data.h"
 #include "../head/display.h"
-// #include "../head/physics.h"
+#include "../head/physics-rules.h"
 
 Uint32 timer_callback(Uint32 interval, void *param)
 {
@@ -35,7 +35,7 @@ int main()
 
     int width = get_width_universe_int();
     int height = get_height_universe_int();
-    int max_trash = get_max_n_trash_int();
+    // int max_trash = get_max_n_trash_int();
     int n_trash = get_init_n_trash_int();
     int n_planets = get_n_planets();
 
