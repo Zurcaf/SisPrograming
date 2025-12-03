@@ -1,6 +1,8 @@
 #include "display.h"
+#include "universe_data.h"
 
-int init_display(const char *title, int width, int height, SDL_Window** window, SDL_Renderer** renderer)
+
+int init_display(const char *title, int width, int height, SDL_Window** window, SDL_Renderer** renderer, SDL_Color* background_color)
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("error initializing SDL: %s\n", SDL_GetError());
@@ -18,22 +20,59 @@ int init_display(const char *title, int width, int height, SDL_Window** window, 
     rend = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     if (!rend) return -1;
     
-    SDL_Color backgroud_color;
-    backgroud_color.r = 255;
-    backgroud_color.g = 255;
-    backgroud_color.b = 255;
-    backgroud_color.a = 255;
-    SDL_SetRenderDrawColor(rend, 
-        backgroud_color.r, backgroud_color.g, backgroud_color.b, 
-        backgroud_color.a);
-    SDL_RenderClear(rend);
-    SDL_RenderPresent(rend);
+    // define background color
+    // branco
+    background_color->r = 255;
+    background_color->g = 255;
+    background_color->b = 255;
+    background_color->a = 255;
 
     *window = win;
     *renderer = rend;
 
     return 0;
 }
+
+
+void render_frame(SDL_Renderer* renderer, SDL_Color *background_color,
+                  planet_t* planets, int n_planets,
+                  trash_t* trash, int n_trash)
+{
+    // limpar fundo
+    SDL_SetRenderDrawColor(renderer, 
+        background_color->r, background_color->g, background_color->b, 
+        background_color->a);
+    SDL_RenderClear(renderer);
+
+    // ---- desenhar planetas ----
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // preto
+    for (int i = 0; i < n_planets; i++) {
+        draw_circle(renderer, (int)planets[i].x, (int)planets[i].y, 20);
+    }
+
+    // ---- desenhar lixo espacial ----
+    SDL_SetRenderDrawColor(renderer, 150, 0, 0, 255); // vermelho escuro
+    for (int i = 0; i < n_trash; i++) {
+        draw_circle(renderer, (int)trash[i].x, (int)trash[i].y, 4);
+    }
+
+    // apresentar frame
+    SDL_RenderPresent(renderer);
+}
+
+void draw_circle(SDL_Renderer* renderer, int cx, int cy, int radius)
+{
+    for (int w = 0; w < radius * 2; w++) {
+        for (int h = 0; h < radius * 2; h++) {
+            int dx = radius - w;
+            int dy = radius - h;
+            if ((dx*dx + dy*dy) <= radius * radius) {
+                SDL_RenderDrawPoint(renderer, cx + dx, cy + dy);
+            }
+        }
+    }
+}
+
 
 // int update_display(SDL_Renderer* rend, planet_t* planets, int total_planets,
 //                     trash_t* trash, int total_trash)

@@ -9,20 +9,23 @@
 #include "universe_data.h"
 #include "display.h"
 
-Uint32 timer_callback(Uint32 interval, void* param){
+Uint32 timer_callback(Uint32 interval, void *param)
+{
     SDL_Event timer_event;
 
-    SDL_zero(timer_event);  /* SDL will copy this entire struct! Initialize to keep memory checkers happy. */
+    SDL_zero(timer_event); /* SDL will copy this entire struct! Initialize to keep memory checkers happy. */
     timer_event.type = SDL_USEREVENT;
     timer_event.user.code = 2;
     timer_event.user.data1 = NULL;
     timer_event.user.data2 = NULL;
     SDL_PushEvent(&timer_event);
     return interval; // to continue the timer
-} 
+}
 
-int main() {
-    if(load_config("../libconfig/init.conf") != 0) {
+int main()
+{
+    if (load_config("../libconfig/init.conf") != 0)
+    {
         printf("Failed to load configuration file.\n");
         exit(1);
     }
@@ -33,44 +36,53 @@ int main() {
     int n_trash = get_init_n_trash_int();
     int n_planets = get_n_planets();
 
-    bool running = 1;
+    bool running = true;
 
-    SDL_Window* win = NULL;
-    SDL_Renderer* rend = NULL;
+    // initialize universe data
+    trash_t *trash = init_trash(n_trash, width, height);
+    planet_t *planets = init_planets(n_planets, width, height);
 
-    if (init_display("Universe Simulator", width, height, &win, &rend) != 0) {
+    // initialize timer
+    SDL_TimerID timer_id = 0;
+
+    // initialize display
+    SDL_Color background_color;
+    SDL_Window *win = NULL;
+    SDL_Renderer *rend = NULL;
+
+    if (init_display("Universe Simulator", width, height, &win, &rend, &background_color) != 0)
+    {
         printf("Failed to initialize display.\n");
         exit(1);
     }
 
-    trash_t *trash = init_trash(n_trash, width, height);
-    planet_t *planets = init_planets(n_planets, width, height);
+    timer_id = SDL_AddTimer(10,
+                            (SDL_TimerCallback)timer_callback, NULL);
 
-    SDL_TimerID timer_id = 0;    
-    timer_id = SDL_AddTimer(10, 
-                (SDL_TimerCallback)timer_callback, NULL);
-    
-    while (running) {
+    while (running)
+    {
         SDL_Event event;
 
         // Events management
         SDL_WaitEvent(&event);
 
-        switch (event.type) {
+        switch (event.type)
+        {
 
-            case SDL_QUIT: 
-                running = 0;
-                break;
-                
-            case SDL_USEREVENT:
-                if (event.user.code == 2){
-                //update_physics(trash, n_trash, planets, n_planets, width, height);
-                // update_display(win, rend, width, height);
-                
+        case SDL_QUIT:
+            running = false;
+            break;
+
+        case SDL_USEREVENT:
+            if (event.user.code == 2)
+            {
+                render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
+                // update_physics(trash, n_trash, planets, n_planets, width, height);
+                //  update_display(win, rend, width, height);
             }
-            break;   
+            break;
         }
-   }
+    }
 
     destroy_display(win, rend);
     return 0;

@@ -2,23 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct vector {
-    float amplitude;
-    float angle;
-};
-
-struct planet {
-    float x, y;
-    float mass;
-};
-
-struct trash {
-    float x, y;
-    struct vector velocity;
-    struct vector acceleration;
-    float mass;
-};
-
 trash_t* init_trash(int n, int width, int height) {
     trash_t* trash = malloc(n * sizeof(trash_t));
     if (trash == NULL) {
