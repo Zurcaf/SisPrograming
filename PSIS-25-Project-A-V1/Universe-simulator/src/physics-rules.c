@@ -71,6 +71,24 @@ void correct_position(float *position, int edge_size){
 
 }
 
+bool check4collisions(trash_t *trash, int *n_trash,
+                      planet_t *planets, int n_planets)
+{
+    // add new trash if collision with planet
+    for (int i = 0; i < n_planets; i++)
+    {
+        // compare planet position with all trash positions
+        for (int j = 0; j < *n_trash; j++)
+        {
+            float dx = planets[i].x - trash[j].x;
+            float dy = planets[i].y - trash[j].y;
+            float distance = sqrt(dx * dx + dy * dy);
+            if (distance < 1) // collision threshold
+            {
+                return true; // collision occurred
+            }
+        }
+    }
 
-
-
+    return false; // no collision
+}

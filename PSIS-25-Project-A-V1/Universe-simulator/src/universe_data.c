@@ -30,3 +30,14 @@ trash_t* init_trash(int n, int width, int height) {
     }
     return trash;
 }
+
+void addTrash(int n_trash, trash_t* trash, int width, int height) 
+{
+    trash[n_trash].x = rand() % width;
+    trash[n_trash].y = rand() % height;
+    trash[n_trash].mass = 1;   //1 mass unit
+    trash[n_trash].velocity.amplitude = 0;
+    trash[n_trash].velocity.angle = 0;
+    trash[n_trash].acceleration.amplitude = 0;
+    trash[n_trash].acceleration.angle = 0;
+}
