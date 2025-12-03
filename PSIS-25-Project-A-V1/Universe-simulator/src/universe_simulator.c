@@ -5,7 +5,7 @@
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL.h>
 
-#include "config.h"
+#include "../../libconfig/config.h"
 #include "../head/universe_data.h"
 #include "../head/display.h"
 #include "../head/physics-rules.h"
@@ -43,7 +43,7 @@ int main()
 
     // initialize universe data
     planet_t *planets = init_planets(n_planets, width, height);
-    trash_t *trash = init_trash(n_trash, width, height);
+    trash_t *trash = init_trash(max_trash, width, height);
 
     // initialize display
     SDL_Color background_color;
@@ -78,18 +78,6 @@ int main()
             {
                 render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
 
-                // // print das posições dos planetas e do trash[0] na consola
-                // for (int i = 0; i < n_planets; i++)
-                // {
-                //     printf("P[%d] x=%.2f y=%.2f | ",
-                //            i,
-                //            planets[i].x,
-                //            planets[i].y);
-                // }
-                // printf("Trash[0] Position: x = %.2f, y = %.2f\n",
-                //        trash[0].x,
-                //        trash[0].y);
-
                 // add new trash if collision with planet
                 for (int i = 0; i < n_planets; i++)
                 {
@@ -113,6 +101,10 @@ int main()
                                 trash[n_trash].acceleration.angle = 0;
                                 n_trash++;
                                 printf("New trash added! Total trash: %d\n", n_trash);
+                            }
+                            else
+                            {
+                                printf("Max trash capacity reached!\n");
                             }
                         }
                     }
