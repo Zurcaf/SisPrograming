@@ -10,9 +10,11 @@
 #include "../head/display.h"
 // #include "../head/physics.h"
 
-Uint32 timer_callback(Uint32 interval)
+Uint32 timer_callback(Uint32 interval, void *param)
 {
     SDL_Event timer_event;
+
+    (void)param;            // explicitly marked as unused
 
     SDL_zero(timer_event); /* SDL will copy this entire struct! Initialize to keep memory checkers happy. */
     timer_event.type = SDL_USEREVENT;
@@ -43,9 +45,6 @@ int main()
     trash_t *trash = init_trash(n_trash, width, height);
     planet_t *planets = init_planets(n_planets, width, height);
 
-    // initialize timer
-    SDL_TimerID timer_id = 0;
-
     // initialize display
     SDL_Color background_color;
     SDL_Window *win = NULL;
@@ -57,8 +56,8 @@ int main()
         exit(1);
     }
 
-    timer_id = SDL_AddTimer(10,
-                            (SDL_TimerCallback)timer_callback, NULL);
+    SDL_AddTimer(10,
+                 (SDL_TimerCallback)timer_callback, NULL);
 
     while (running)
     {
@@ -79,7 +78,6 @@ int main()
             {
                 render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
                 // update_physics(trash, n_trash, planets, n_planets, width, height);
-                //  update_display(win, rend, width, height);
             }
             break;
         }

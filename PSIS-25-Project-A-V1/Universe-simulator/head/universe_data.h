@@ -1,6 +1,9 @@
 #ifndef UNIVERSE_DATA_H
 #define UNIVERSE_DATA_H
 
+#include <stdio.h>
+#include <stdlib.h>
+
 typedef struct vector {
     float amplitude;
     float angle;
