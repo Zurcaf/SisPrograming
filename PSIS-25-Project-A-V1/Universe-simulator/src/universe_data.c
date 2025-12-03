@@ -1,4 +1,17 @@
 #include "../head/universe_data.h"
+planet_t* init_planets(int n, int width, int height) {
+    planet_t* planets = malloc(n * sizeof(planet_t));
+    if (planets == NULL) {
+        fprintf(stderr, "Memory allocation failed for planets.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < n; i++) {
+        planets[i].x = rand() % width;
+        planets[i].y = rand() % height;
+        planets[i].mass = 10;   //10 mass units
+    }
+    return planets;
+}
 
 trash_t* init_trash(int n, int width, int height) {
     trash_t* trash = malloc(n * sizeof(trash_t));
@@ -16,18 +29,4 @@ trash_t* init_trash(int n, int width, int height) {
         trash[i].acceleration.angle = 0;
     }
     return trash;
-}
-
-planet_t* init_planets(int n, int width, int height) {
-    planet_t* planets = malloc(n * sizeof(planet_t));
-    if (planets == NULL) {
-        fprintf(stderr, "Memory allocation failed for planets.\n");
-        exit(EXIT_FAILURE);
-    }
-    for (int i = 0; i < n; i++) {
-        planets[i].x = rand() % width;
-        planets[i].y = rand() % height;
-        planets[i].mass = 10;   //10 mass units
-    }
-    return planets;
 }

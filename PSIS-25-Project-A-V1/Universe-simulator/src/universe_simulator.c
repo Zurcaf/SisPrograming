@@ -35,15 +35,15 @@ int main()
 
     int width = get_width_universe_int();
     int height = get_height_universe_int();
-    // int max_trash = get_max_n_trash_int();
+    int max_trash = get_max_n_trash_int();
     int n_trash = get_init_n_trash_int();
     int n_planets = get_n_planets();
 
     bool running = true;
 
     // initialize universe data
-    trash_t *trash = init_trash(n_trash, width, height);
     planet_t *planets = init_planets(n_planets, width, height);
+    trash_t *trash = init_trash(n_trash, width, height);
 
     // initialize display
     SDL_Color background_color;
@@ -77,6 +77,47 @@ int main()
             if (event.user.code == 2)
             {
                 render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
+
+                // // print das posições dos planetas e do trash[0] na consola
+                // for (int i = 0; i < n_planets; i++)
+                // {
+                //     printf("P[%d] x=%.2f y=%.2f | ",
+                //            i,
+                //            planets[i].x,
+                //            planets[i].y);
+                // }
+                // printf("Trash[0] Position: x = %.2f, y = %.2f\n",
+                //        trash[0].x,
+                //        trash[0].y);
+
+                // add new trash if collision with planet
+                for (int i = 0; i < n_planets; i++)
+                {
+                    //compare planet position with all trash positions
+                    for (int j = 0; j < n_trash; j++)
+                    {
+                        float dx = planets[i].x - trash[j].x;
+                        float dy = planets[i].y - trash[j].y;
+                        float distance = sqrt(dx * dx + dy * dy);
+                        if (distance < 1) //collision threshold
+                        {
+                            if (n_trash < max_trash)
+                            {
+                                //add new trash
+                                trash[n_trash].x = rand() % width;
+                                trash[n_trash].y = rand() % height;
+                                trash[n_trash].mass = 1;   //1 mass unit
+                                trash[n_trash].velocity.amplitude = 0;
+                                trash[n_trash].velocity.angle = 0;
+                                trash[n_trash].acceleration.amplitude = 0;
+                                trash[n_trash].acceleration.angle = 0;
+                                n_trash++;
+                                printf("New trash added! Total trash: %d\n", n_trash);
+                            }
+                        }
+                    }
+                }
+
                 update_physics(trash, n_trash, planets, n_planets, width, height);
             }
             break;

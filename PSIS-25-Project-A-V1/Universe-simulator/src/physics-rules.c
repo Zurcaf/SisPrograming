@@ -20,8 +20,12 @@ void new_trash_acceleration(planet_t *planets, int total_planets,
             float force_vector_x = planets[n_planet].x - trash[n_trash].x;
             float force_vector_y = planets[n_planet].y - trash[n_trash].y;
             vector_t local_vector_force = make_vector(force_vector_x, force_vector_y);
-            local_vector_force.amplitude = (planets[n_planet].mass * trash[n_trash].mass)/
-                                            pow(local_vector_force.amplitude, 2);
+
+            float distance = local_vector_force.amplitude;
+            if (distance < 0.001)
+                distance = 0.001;
+            local_vector_force.amplitude = (planets[n_planet].mass * trash[n_trash].mass) / (distance * distance);
+
             total_vector_force = add_vectors(local_vector_force, total_vector_force);
         }
         trash[n_trash].acceleration = total_vector_force ; // / trash[n_trash].mass
@@ -64,7 +68,7 @@ void correct_position(float *position, int edge_size){
     if (*position > edge_size){
         *position = 0;
     }
-    
+
 }
 
 
