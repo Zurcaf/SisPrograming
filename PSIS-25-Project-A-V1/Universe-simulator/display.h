@@ -4,8 +4,8 @@
 #include "universe_data.h"
 #include <SDL2/SDL.h>
 
-
-int update_display(SDL_Window* window, SDL_Renderer* renderer, int width, int height);
+int init_display(const char *title, int width, int height, SDL_Window** window, SDL_Renderer** renderer);
+// int update_display(SDL_Window* window, SDL_Renderer* renderer, int width, int height);
 int destroy_display(SDL_Window* window, SDL_Renderer* renderer);
 
 #endif
