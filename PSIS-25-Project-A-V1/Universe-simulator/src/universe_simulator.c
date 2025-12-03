@@ -77,7 +77,7 @@ int main()
             if (event.user.code == 2)
             {
                 render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
-                // update_physics(trash, n_trash, planets, n_planets, width, height);
+                update_physics(trash, n_trash, planets, n_planets, width, height);
             }
             break;
         }

@@ -2,12 +2,12 @@
 
 void update_physics(trash_t *trash, int total_trash,
                     planet_t *planets, int total_planets,
-                    int universe_width, int universe_height){
+                    int universe_width, int universe_height)
+{
     new_trash_acceleration(planets, total_planets, trash, total_trash);
     new_trash_velocity(trash, total_trash);
     new_trash_position(trash, total_trash, universe_width, universe_height);
 }
-
 
 void new_trash_acceleration(planet_t *planets, int total_planets,
                             trash_t *trash, int total_trash){
