@@ -64,6 +64,7 @@ void correct_position(float *position, int edge_size){
     if (*position > edge_size){
         *position = 0;
     }
+    
 }
 
 
