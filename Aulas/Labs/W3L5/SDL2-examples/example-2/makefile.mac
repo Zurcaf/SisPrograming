@@ -1,0 +1,13 @@
+all: example-2
+
+example-2: example-2.c
+	gcc -g example-2.c -o example-2 \
+		-lSDL2 -lSDL2_gfx  \
+		-I/opt/homebrew/Cellar/sdl2/2.32.10/include \
+		-L/opt/homebrew/Cellar/sdl2/2.32.10/lib \
+		-I/opt/homebrew/Cellar/sdl2/2.32.10/include/SDL2 \
+		-I/opt/homebrew/Cellar/sdl2_gfx/1.0.4/include \
+		-L/opt/homebrew/Cellar/sdl2_gfx/1.0.4/lib \
+
+clean:
+	rm -f example-2
