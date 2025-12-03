@@ -1,7 +1,7 @@
 #ifndef PHYSICS_RULES_H
 #define PHYSICS_RULES_H
-#include "universe_data.h"
 
+#include "universe_data.h"
 
 void new_trash_acceleration(planet_t *planets, int total_planets, trash_t *trash, int total_trash);
 void new_trash_velocity(trash_t *trash, int total_trash);

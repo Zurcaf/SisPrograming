@@ -1,6 +1,7 @@
-#include "universe_data.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../head/universe_data.h"
 
 trash_t* init_trash(int n, int width, int height) {
     trash_t* trash = malloc(n * sizeof(trash_t));

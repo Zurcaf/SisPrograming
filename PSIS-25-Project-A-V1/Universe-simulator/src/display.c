@@ -1,6 +1,4 @@
-#include "display.h"
-#include "universe_data.h"
-
+#include "../head/display.h"
 
 int init_display(const char *title, int width, int height, SDL_Window** window, SDL_Renderer** renderer, SDL_Color* background_color)
 {

@@ -6,10 +6,11 @@
 #include <SDL2/SDL.h>
 
 #include "config.h"
-#include "universe_data.h"
-#include "display.h"
+#include "../head/universe_data.h"
+#include "../head/display.h"
+// #include "../head/physics.h"
 
-Uint32 timer_callback(Uint32 interval, void *param)
+Uint32 timer_callback(Uint32 interval)
 {
     SDL_Event timer_event;
 

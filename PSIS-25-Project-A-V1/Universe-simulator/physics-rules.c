@@ -1,5 +1,6 @@
-#include "universe_data.h"
 #include <math.h>
+
+#include "../head/universe_data.h"
 
 void update_physics(trash_t *trash, int total_trash,
                     planet_t *planets, int total_planets,
