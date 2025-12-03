@@ -77,36 +77,17 @@ int main()
             if (event.user.code == 2)
             {
                 render_frame(rend, &background_color, planets, n_planets, trash, n_trash);
-
-                // add new trash if collision with planet
-                for (int i = 0; i < n_planets; i++)
+                if (check4collisions(trash, &n_trash, planets, n_planets))
                 {
-                    //compare planet position with all trash positions
-                    for (int j = 0; j < n_trash; j++)
+                    if (n_trash >= max_trash) {
+                        running = false;
+                        printf("Max trash capacity reached! Ending simulation.\n");
+                    }
+                    else
                     {
-                        float dx = planets[i].x - trash[j].x;
-                        float dy = planets[i].y - trash[j].y;
-                        float distance = sqrt(dx * dx + dy * dy);
-                        if (distance < 1) //collision threshold
-                        {
-                            if (n_trash < max_trash)
-                            {
-                                //add new trash
-                                trash[n_trash].x = rand() % width;
-                                trash[n_trash].y = rand() % height;
-                                trash[n_trash].mass = 1;   //1 mass unit
-                                trash[n_trash].velocity.amplitude = 0;
-                                trash[n_trash].velocity.angle = 0;
-                                trash[n_trash].acceleration.amplitude = 0;
-                                trash[n_trash].acceleration.angle = 0;
-                                n_trash++;
-                                printf("New trash added! Total trash: %d\n", n_trash);
-                            }
-                            else
-                            {
-                                printf("Max trash capacity reached!\n");
-                            }
-                        }
+                        addTrash(n_trash, trash, width, height);
+                        n_trash++;
+                        printf("Collision detected! New trash added. Total trash: %d\n", n_trash);
                     }
                 }
 

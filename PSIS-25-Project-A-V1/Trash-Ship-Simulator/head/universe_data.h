@@ -22,6 +22,7 @@ typedef struct trash {
 } trash_t;
 
 trash_t* init_trash(int n, int width, int height);
+void addTrash(int n_trash, trash_t* trash, int width, int height);
 
 planet_t* init_planets(int n, int width, int height);
 
