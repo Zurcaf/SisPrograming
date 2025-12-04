@@ -8,9 +8,11 @@
 int init_display(const char *title, int width, int height, SDL_Window **window, SDL_Renderer **renderer, SDL_Color* background_color);
 void render_frame(SDL_Renderer *renderer, SDL_Color *background_color,
                   planet_t *planets, int n_planets,
-                  trash_t *trash, int n_trash);
+                  trash_t *trash, int n_trash, ship_t* ship);
 void draw_circle(SDL_Renderer* renderer, int cx, int cy, int radius);                  
 // int update_display(SDL_Window* window, SDL_Renderer* renderer, int width, int height);
 int destroy_display(SDL_Window* window, SDL_Renderer* renderer);
+void render_client_frame(SDL_Renderer* renderer, SDL_Color *background_color, char direction);
+
 
 #endif
