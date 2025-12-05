@@ -96,7 +96,8 @@ int main()
             break;
         }
     }
-
+    free(planets);
+    free(trash);
     destroy_display(win, rend);
     return 0;
 }
