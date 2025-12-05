@@ -3,8 +3,7 @@
 #include <zmq.h>
 #include <stdlib.h>
 #include <string.h>
-
-
+#include "ship_movement.pb-c.h"
 
 
 #define UP 'u'

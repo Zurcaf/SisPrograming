@@ -51,7 +51,7 @@ int main() {
 
     planet_t* planets = init_planets(n_planets, width, height);
     trash_t* trash = init_trash(n_trash, max_n_trash, width, height);
-    ship_t* ship = NULL;
+    ship_t* ship = init_ship(capacity_ship);
 
     bool running = 1;
     char message_type[1024];
@@ -77,11 +77,14 @@ int main() {
             if (event.user.code == 2)
             {
                 if(read_message(fd, message_type, &ship_id, &direction) != -1){
-                    if(strcmp("CONNECT", message_type) == 0 && ship == NULL) {
-                        ship = init_ship(capacity_ship);
+                    int index = ship_index(ship_id);
+                    if(strcmp("CONNECT", message_type) == 0 && ship[index].current_load == -1) {
+                        if(index != -1){
+                            ship[index].current_load = 0; //set current load to 0 when ship connects
+                        }
                     }else{
-                        if(strcmp("MOVE", message_type) == 0 && ship != NULL) {
-                        handle_data(ship, direction, trash, planets, width, height, n_trash, n_planets);
+                        if(strcmp("MOVE", message_type) == 0 && ship[index].current_load != -1) {
+                        handle_data(ship, direction, trash, planets, width, height, n_trash, n_planets, index);
                         }
                     }
                 send_response (fd, "OK");

@@ -63,8 +63,12 @@ void render_frame(SDL_Renderer* renderer, SDL_Color *background_color,
     SDL_RenderClear(renderer);
 
     // ---- desenhar planetas ----
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // preto
     for (int i = 0; i < n_planets; i++) {
+        if(planets[i].mass == 0) {
+            SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // green for recycling planet
+        } else {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black for normal planets
+        }
         draw_circle(renderer, (int)planets[i].x, (int)planets[i].y, 20);
     }
 
@@ -77,8 +81,12 @@ void render_frame(SDL_Renderer* renderer, SDL_Color *background_color,
     }
 
     if (ship != NULL) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255); // blue for ship
-        draw_circle(renderer, (int)ship->x, (int)ship->y, 14);
+        for(int i = 0; i < 52; i++) {
+            if(ship[i].current_load >= 0) { //only draw connected ships
+                SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255); // blue for ship
+                draw_circle(renderer, (int)ship[i].x, (int)ship[i].y, 14);
+            }
+        }
     }
 
     // apresentar frame

@@ -32,9 +32,11 @@ typedef struct ship{
 trash_t* init_trash(int n, int max, int width, int height);
 planet_t* init_planets(int n, int width, int height);
 ship_t* init_ship(int capacity);
-void handle_data(ship_t* ship, char direction, trash_t* trash, planet_t* planets, int width, int height, int n_trash, int n_planets);
+void handle_data(ship_t* ship, char direction, trash_t* trash, planet_t* planets,
+     int width, int height, int n_trash, int n_planets, int ship_index);
 bool contact_made(float src_x, float src_y, float dest_x, float dest_y, int radius);
 void correct_position(float *position, int edge_size);
+int ship_index(char id);
 
 
 

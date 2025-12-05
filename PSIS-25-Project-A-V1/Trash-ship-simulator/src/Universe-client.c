@@ -38,7 +38,14 @@ int main() {
     SDL_Color background_color_c;
     SDL_Window *win_c = NULL;
     SDL_Renderer *rend_c = NULL;
-    if (init_display("Universe Client", 400, 400, &win_c, &rend_c, &background_color_c) != 0)
+    
+    char buffer[256];
+    strcpy(buffer, "Universe Client");
+    strcat(buffer, " ");
+    strncat(buffer, &ch, 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+
+    if (init_display(buffer, 400, 400, &win_c, &rend_c, &background_color_c) != 0)
     {
         printf("Failed to initialize display.\n");
         exit(1);
