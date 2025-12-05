@@ -42,24 +42,16 @@ void render_frame(SDL_Renderer* renderer, SDL_Color *background_color,
         background_color->a);
     SDL_RenderClear(renderer);
 
-
-
     // ---- desenhar planetas ----
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // preto
     for (int i = 0; i < n_planets; i++) {
-        float x, y;
-        get_planet_cords(i, planets, &x, &y);
-
-        draw_circle(renderer, (int)x, (int)y, 20);
+        draw_circle(renderer, (int)planets[i].x, (int)planets[i].y, 20);
     }
 
     // ---- desenhar lixo espacial ----
     SDL_SetRenderDrawColor(renderer, 150, 0, 0, 255); // vermelho escuro
     for (int i = 0; i < n_trash; i++) {
-        float x, y;
-        get_trash_cords(i, trash, &x, &y);
-    
-        draw_circle(renderer, (int)x, (int)y, 4);
+        draw_circle(renderer, (int)trash[i].x, (int)trash[i].y, 4);
     }
 
     // apresentar frame
