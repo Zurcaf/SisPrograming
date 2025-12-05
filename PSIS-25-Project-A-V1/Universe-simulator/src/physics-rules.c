@@ -10,65 +10,92 @@ void update_physics(trash_t *trash, int total_trash,
 }
 
 void new_trash_acceleration(planet_t *planets, int total_planets,
-                            trash_t *trash, int total_trash){
+                            trash_t *trash, int total_trash)
+{
     vector_t total_vector_force;
 
-    for (int n_trash = 0; n_trash < total_trash; n_trash ++){
+    for (int n_trash = 0; n_trash < total_trash; n_trash++)
+    {
         total_vector_force.amplitude = 0;
         total_vector_force.angle = 0;
-        for (int n_planet = 0; n_planet < total_planets; n_planet ++){
-            float force_vector_x = planets[n_planet].x - trash[n_trash].x;
-            float force_vector_y = planets[n_planet].y - trash[n_trash].y;
+        for (int n_planet = 0; n_planet < total_planets; n_planet++)
+        {
+            float planet_x, planet_y, trash_x, trash_y;
+            get_planet_cords(n_planet, planets, &planet_x, &planet_y);
+            get_trash_cords(n_trash, trash, &trash_x, &trash_y);
+            float force_vector_x = planet_x - trash_x;
+            float force_vector_y = planet_y - trash_y;
+
             vector_t local_vector_force = make_vector(force_vector_x, force_vector_y);
 
             float distance = local_vector_force.amplitude;
             if (distance < 0.001)
                 distance = 0.001;
-            local_vector_force.amplitude = (planets[n_planet].mass * trash[n_trash].mass) / (distance * distance);
+
+            int planet_mass, trash_mass;
+            get_trash_mass(n_trash, trash, &trash_mass);
+            get_planet_mass(n_planet, planets, &planet_mass);
+
+            local_vector_force.amplitude = (planet_mass * trash_mass) / (distance * distance);
 
             total_vector_force = add_vectors(local_vector_force, total_vector_force);
+
+            // set new trash acceleration
+            update_trash_acceleration(n_trash, trash, total_vector_force.amplitude, total_vector_force.angle);
         }
-        trash[n_trash].acceleration = total_vector_force ; // / trash[n_trash].mass
     }
 }
 
-void new_trash_velocity(trash_t *trash, int total_trash){
-    for (int n_trash = 0; n_trash < total_trash; n_trash ++){
-        trash[n_trash].velocity.amplitude *= 0.99; //friction
-        trash[n_trash].velocity = add_vectors(trash[n_trash].velocity, trash[n_trash].acceleration);
+void new_trash_velocity(trash_t *trash, int total_trash)
+{
+    for (int n_trash = 0; n_trash < total_trash; n_trash++)
+    {
+
+        friction_in_trash_velocity(n_trash, trash, 0.99);
+
+        float accelelation_ampl, acceleration_angle, velocity_ampl, velocity_angle;
+        get_trash_acceleration(n_trash, trash, &accelelation_ampl, &acceleration_angle);
+        get_trash_velocity(n_trash, trash, &velocity_ampl, &velocity_angle);
+
+        vector_t acceleration_vector = make_vector(accelelation_ampl, acceleration_angle);
+        vector_t velocity_vector = make_vector(velocity_ampl, velocity_angle);
+
+        // add acceleration to velocity
+        vector_t new_velocity_vector = add_vectors(acceleration_vector, velocity_vector);
+
+        update_trash_velocity(n_trash, trash, new_velocity_vector.amplitude, new_velocity_vector.angle);
     }
 }
 
-void new_trash_position( trash_t *trash, int total_trash, int universe_width, int universe_height){
-    for (int n_trash = 0; n_trash < total_trash; n_trash ++){
-        trash[n_trash].x += trash[n_trash].velocity.amplitude * cos( trash[n_trash].velocity.angle);
-        trash[n_trash].y += trash[n_trash].velocity.amplitude * sin( trash[n_trash].velocity.angle);
-        correct_position(&trash[n_trash].x, universe_width);
-        correct_position(&trash[n_trash].y, universe_height);
+void new_trash_position(trash_t *trash, int total_trash, int universe_width, int universe_height)
+{
+    for (int n_trash = 0; n_trash < total_trash; n_trash++)
+    {
+        float velocity_ampl, velocity_angle;
+        get_trash_velocity(n_trash, trash, &velocity_ampl, &velocity_angle);
+
+        float delta_x = velocity_ampl * cos(velocity_angle);
+        float delta_y = velocity_ampl * sin(velocity_angle);
+
+        update_trash_cords(n_trash, trash, delta_x, delta_y);
+
+        correct_position(n_trash, trash, universe_width, universe_height);
     }
 }
 
-vector_t make_vector(float x, float y){
+vector_t make_vector(float x, float y)
+{
     vector_t vector;
-    vector.amplitude = sqrt(x*x + y*y);
+    vector.amplitude = sqrt(x * x + y * y);
     vector.angle = atan2(y, x);
     return vector;
 }
 
-vector_t add_vectors(vector_t v1, vector_t v2){
+vector_t add_vectors(vector_t v1, vector_t v2)
+{
     float x = v1.amplitude * cos(v1.angle) + v2.amplitude * cos(v2.angle);
     float y = v1.amplitude * sin(v1.angle) + v2.amplitude * sin(v2.angle);
     return make_vector(x, y);
-}
-
-void correct_position(float *position, int edge_size){
-    if (*position < 0){
-        *position = edge_size; //universe width/height
-    }
-    if (*position > edge_size){
-        *position = 0;
-    }
-
 }
 
 bool check4collisions(trash_t *trash, int *n_trash,
@@ -80,8 +107,12 @@ bool check4collisions(trash_t *trash, int *n_trash,
         // compare planet position with all trash positions
         for (int j = 0; j < *n_trash; j++)
         {
-            float dx = planets[i].x - trash[j].x;
-            float dy = planets[i].y - trash[j].y;
+            float planet_x, planet_y, trash_x, trash_y;
+            get_planet_cords(i, planets, &planet_x, &planet_y);
+            get_trash_cords(j, trash, &trash_x, &trash_y);
+
+            float dx = planet_x - trash_x;
+            float dy = planet_y - trash_y;
             float distance = sqrt(dx * dx + dy * dy);
             if (distance < 1) // collision threshold
             {

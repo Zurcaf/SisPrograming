@@ -9,7 +9,7 @@
 void new_trash_acceleration(planet_t *planets, int total_planets, trash_t *trash, int total_trash);
 void new_trash_velocity(trash_t *trash, int total_trash);
 void new_trash_position(trash_t *trash, int total_trash, int universe_width, int universe_height);
-void correct_position(float *position, int edge_size);
+
 void update_physics(trash_t *trash, int total_trash,
                     planet_t *planets, int total_planets,
                     int universe_width, int universe_height);
