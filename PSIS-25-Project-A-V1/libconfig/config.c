@@ -43,4 +43,4 @@ int get_height_universe_int(void) { return height_universe_int; }
 int get_max_n_trash_int(void)     { return max_n_trash_int;     }
 int get_init_n_trash_int(void)    { return init_n_trash_int;    }
 int get_capacity_ship_int(void)   { return capacity_ship_int;   }
-int get_n_planets(void)           { return n_planets_int;       }
+int get_n_planets_int(void)           { return n_planets_int;       }

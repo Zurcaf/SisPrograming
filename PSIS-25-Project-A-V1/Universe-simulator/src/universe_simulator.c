@@ -37,7 +37,7 @@ int main()
     int height = get_height_universe_int();
     int max_trash = get_max_n_trash_int();
     int n_trash = get_init_n_trash_int();
-    int n_planets = get_n_planets();
+    int n_planets = get_n_planets_int();
 
     bool running = true;
 
