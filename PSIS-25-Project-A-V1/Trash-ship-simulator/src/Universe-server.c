@@ -95,6 +95,9 @@ int main() {
         }
     }
     destroy_display(win, rend);
+    free(planets);
+    free(trash);
+    free(ship);
     zmq_close(fd);
     return 0;
 }
