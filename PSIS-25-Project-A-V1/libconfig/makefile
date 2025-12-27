@@ -2,13 +2,18 @@
 
 CC = gcc
 
-# Detect Homebrew prefix (arm64: /opt/homebrew, Intel: /usr/local)
-BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
-
-CFLAGS = -Wall -Wextra -std=c11 -g \
-         $(if $(BREW_PREFIX),-I$(BREW_PREFIX)/include)
-
-LDFLAGS = $(if $(BREW_PREFIX),-L$(BREW_PREFIX)/lib -lconfig++)
+# Detect OS and set paths accordingly
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    # macOS with Homebrew
+    export PKG_CONFIG_PATH := /opt/homebrew/lib/pkgconfig:$(PKG_CONFIG_PATH)
+    CFLAGS = -Wall -Wextra -std=c11 -g -I/opt/homebrew/include
+    LDFLAGS = -L/opt/homebrew/lib -lconfig++
+else
+    # Linux/WSL - uses system paths and pkg-config
+    CFLAGS = -Wall -Wextra -std=c11 -g $(shell pkg-config --cflags libconfig++ 2>/dev/null)
+    LDFLAGS = $(shell pkg-config --libs libconfig++ 2>/dev/null)
+endif
 
 OBJ = config.o
 

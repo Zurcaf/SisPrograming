@@ -1,13 +1,25 @@
 CC = gcc
+
+# Detect OS and set PKG_CONFIG_PATH accordingly
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    # macOS with Homebrew
+    export PKG_CONFIG_PATH := /opt/homebrew/lib/pkgconfig:$(PKG_CONFIG_PATH)
+    EXTRA_INCLUDES := -I/opt/homebrew/include
+else
+    # Linux/WSL - uses system paths
+    EXTRA_INCLUDES :=
+endif
+
 CFLAGS = -Wall -Wextra -std=c11 -g \
          -Iheader \
          -I../libconfig \
-         -I/opt/homebrew/Cellar/libconfig/1.8.1/include \
-         `sdl2-config --cflags`
+         $(EXTRA_INCLUDES) \
+         $(shell sdl2-config --cflags) \
+         $(shell pkg-config --cflags libconfig++ 2>/dev/null)
 
-LDFLAGS = `sdl2-config --libs` \
-          -L/opt/homebrew/Cellar/libconfig/1.8.1/lib \
-          -lconfig++ -lm
+LDFLAGS = $(shell sdl2-config --libs) \
+          $(shell pkg-config --libs libconfig++ 2>/dev/null) -lm
 
 # Directories
 SRC_DIR = src
