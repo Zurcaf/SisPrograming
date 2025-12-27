@@ -1,13 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <SDL2/SDL.h>
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
-
-#include <SDL2/SDL_timer.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_timer.h>
 
 #include "../libconfig/config.h"
 #include "../head/universe_data.h"

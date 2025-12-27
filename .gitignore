@@ -1,0 +1,46 @@
+# Arquivos objeto e binários
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Executáveis do projeto
+PSIS-25-Project-A-V1/Trash-ship-simulator/universe-simulator
+PSIS-25-Project-A-V1/Trash-ship-simulator/trash-ship-simulator
+PSIS-25-Project-A-V1/Universe-simulator/universe_simulator
+
+# Diretórios de build
+*/obj/
+*/build/
+*/__pycache__/
+
+# Arquivos gerados por protobuf
+*.pb-c.c
+*.pb-c.h
+*.pb.cc
+*.pb.h
+
+# Arquivos de debug e símbolos
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Arquivos do macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# VS Code
+.vscode/settings.json
+.vscode/launch.json
+.vscode/ipch/
+
+# Arquivos temporários
+*~
+*.swp
+*.swo
+*.tmp

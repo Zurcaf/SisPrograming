@@ -1,16 +1,22 @@
+# Para o makefile funcionar, instale as seguintes dependências no seu sistema:
+# sudo apt update
+# sudo apt install build-essential libsdl2-dev libzmq3-dev libconfig++-dev protobuf-c-compiler libprotobuf-c-dev pkg-config
+
+
 # Makefile - builds two executables: universe-simulator (server) and trash-ship-simulator (client)
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -g \
-         -Iheader \
-         -I../libconfig \
-         -I/opt/homebrew/Cellar/libconfig/1.8.1/include \
-         `sdl2-config --cflags`
 
-# Note: put libraries used for linking here (libs after objects)
-LDFLAGS = `sdl2-config --libs` \
-          -L/opt/homebrew/Cellar/libconfig/1.8.1/lib \
-          -lconfig++ -lzmq -lm -lprotobuf-c
+# Detect OS and set PKG_CONFIG_PATH accordingly
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    # macOS with Homebrew
+    export PKG_CONFIG_PATH := /opt/homebrew/lib/pkgconfig:$(PKG_CONFIG_PATH)
+    EXTRA_INCLUDES := -I/opt/homebrew/include
+else
+    # Linux/WSL - uses system paths
+    EXTRA_INCLUDES :=
+endif
 
 # Directories
 SRC_DIR = src
@@ -24,21 +30,46 @@ LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 SRC = $(wildcard $(SRC_DIR)/*.c)
 OBJ = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
 
-# --- THE FIX IS HERE ---
-# Define the protobuf object file so we can add it easily
+# Protobuf object file
 PROTO_OBJ = $(OBJ_DIR)/ship_movement.pb-c.o
 
 # Explicit object lists for each executable
-# Added $(PROTO_OBJ) to both lists so the linker can find the 'unpack' functions
-SERVER_OBJS = $(OBJ_DIR)/universe_data.o $(OBJ_DIR)/display.o $(OBJ_DIR)/Universe-server.o $(OBJ_DIR)/Communication.o $(PROTO_OBJ) $(LIBCONFIG_OBJ)
+SERVER_OBJS = \
+	$(OBJ_DIR)/universe_data.o \
+	$(OBJ_DIR)/display.o \
+	$(OBJ_DIR)/Universe-server.o \
+	$(OBJ_DIR)/Communication.o \
+	$(PROTO_OBJ) \
+	$(LIBCONFIG_OBJ)
 
-CLIENT_OBJS = $(OBJ_DIR)/universe_data.o $(OBJ_DIR)/display.o $(OBJ_DIR)/Universe-client.o $(OBJ_DIR)/Communication.o $(PROTO_OBJ) $(LIBCONFIG_OBJ)
+CLIENT_OBJS = \
+	$(OBJ_DIR)/universe_data.o \
+	$(OBJ_DIR)/display.o \
+	$(OBJ_DIR)/Universe-client.o \
+	$(OBJ_DIR)/Communication.o \
+	$(PROTO_OBJ) \
+	$(LIBCONFIG_OBJ)
 
 # Binaries
 SERVER_BIN = universe-simulator
 CLIENT_BIN = trash-ship-simulator
 
-# Default: build both
+# -----------------------------
+# Compiler and linker flags
+# -----------------------------
+CFLAGS = -Wall -Wextra -std=c11 -g \
+         -Iheader \
+         -I../libconfig \
+         $(EXTRA_INCLUDES) \
+         $(shell sdl2-config --cflags) \
+         $(shell pkg-config --cflags libconfig++ libprotobuf-c libzmq)
+
+LDFLAGS = $(shell sdl2-config --libs) \
+          $(shell pkg-config --libs libconfig++ libprotobuf-c libzmq) -lm
+
+# -----------------------------
+# Default target: build both executables
+# -----------------------------
 all: $(OBJ_DIR) $(LIBCONFIG_OBJ) $(SERVER_BIN) $(CLIENT_BIN)
 
 # Link server
@@ -57,11 +88,11 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-# Build libconfig
+# Build libconfig submodule
 $(LIBCONFIG_OBJ):
 	$(MAKE) -C $(LIBCONFIG_DIR)
 
-# Clean
+# Clean build artifacts
 clean:
 	rm -f $(OBJ_DIR)/*.o $(SERVER_BIN) $(CLIENT_BIN)
 	$(MAKE) -C $(LIBCONFIG_DIR) clean

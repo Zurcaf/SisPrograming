@@ -1,8 +1,14 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -g \
-    -I/opt/homebrew/Cellar/libconfig/1.8.1/include
+# libconfig Makefile
 
-LDFLAGS = -L/opt/homebrew/Cellar/libconfig/1.8.1/lib -lconfig++
+CC = gcc
+
+# Detect Homebrew prefix (arm64: /opt/homebrew, Intel: /usr/local)
+BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
+
+CFLAGS = -Wall -Wextra -std=c11 -g \
+         $(if $(BREW_PREFIX),-I$(BREW_PREFIX)/include)
+
+LDFLAGS = $(if $(BREW_PREFIX),-L$(BREW_PREFIX)/lib -lconfig++)
 
 OBJ = config.o
 
@@ -12,4 +18,4 @@ config.o: config.c config.h
 	$(CC) $(CFLAGS) -c config.c -o config.o
 
 clean:
-	rm -f config.o
+	rm -f $(OBJ)
