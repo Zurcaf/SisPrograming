@@ -31,6 +31,7 @@ typedef struct ship{
 
 trash_t* init_trash(int n, int max, int width, int height);
 planet_t* init_planets(int n, int width, int height);
+void addTrash(int n_trash, trash_t* trash, int width, int height);
 ship_t* init_ship(int capacity);
 void handle_data(ship_t* ship, char direction, trash_t* trash, planet_t* planets,
      int width, int height, int n_trash, int n_planets, int ship_index);
