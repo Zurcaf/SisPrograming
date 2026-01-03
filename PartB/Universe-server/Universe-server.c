@@ -5,7 +5,7 @@
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL.h>
 
-#include "config.h"
+#include <config.h>
 #include "../head/universe_data.h"
 #include "../head/display.h"
 #include "../head/Communication.h"
