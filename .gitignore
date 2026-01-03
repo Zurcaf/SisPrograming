@@ -11,9 +11,8 @@ PartA/Trash-ship-simulator/universe-simulator
 PartA/Trash-ship-simulator/trash-ship-simulator
 PartA/Universe-simulator/universe_simulator
 
-PartB/Trash-ship-simulator/universe-simulator
-PartB/Trash-ship-simulator/trash-ship-simulator
-PartB/Universe-simulator/universe_simulator
+# PartB executables (centralizados em 0Executaveis)
+PartB/0Executaveis/*
 
 # Diretórios de build
 */obj/
