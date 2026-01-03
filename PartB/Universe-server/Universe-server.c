@@ -59,6 +59,7 @@ int main()
     const Uint32 recycle_rotate_interval_ms = 30000; // 30s
 
     bool running = 1;
+    bool game_over = false;
     char message_type[1024];
     char ship_id;
     char direction;
@@ -133,10 +134,6 @@ int main()
                 n_trash++;
                 printf("Collision detected! New trash created. Total trash: %d\n", n_trash);
             }
-            else
-            {
-                printf("Max trash capacity reached!\n");
-            }
         }
 
         Uint32 now_ms = SDL_GetTicks();
@@ -149,10 +146,6 @@ int main()
                 addTrash(n_trash, trash, width, height);
                 n_trash++;
                 printf("Periodic trash spawn. Total trash: %d\n", n_trash);
-            }
-            else
-            {
-                printf("Periodic spawn skipped: max trash reached.\n");
             }
             last_trash_spawn_ms = now_ms;
         }
@@ -182,6 +175,35 @@ int main()
 
         // Render every frame
         render_frame(rend, &background_color, planets, n_planets, trash, n_trash, ship);
+
+        // Check for game over condition after all spawns
+        if (n_trash >= max_n_trash && !game_over)
+        {
+            game_over = true;
+
+            SDL_MessageBoxColorScheme scheme = {
+                .colors = {
+                    {255, 0, 0},   // background red
+                    {0, 0, 0},     // text black
+                    {0, 0, 0},     // button border black
+                    {0, 0, 0},     // button background black
+                    {255, 0, 0}    // button selected (red)
+                }
+            };
+
+            SDL_MessageBoxData msgbox = {0};
+            msgbox.flags = SDL_MESSAGEBOX_ERROR;
+            msgbox.window = win;
+            msgbox.title = "Game Over";
+            msgbox.message = "Game Over\nThe Universe is Full Off Trash! Humanity is Doomed!";
+            msgbox.colorScheme = &scheme;
+
+            SDL_ShowMessageBox(&msgbox, NULL);
+
+            // Gracefully stop the loop and close connections/rendering
+            running = 0;
+            break;
+        }
 
         // Frame rate limiting (maintain 30 FPS)
         Uint32 frame_time = SDL_GetTicks() - frame_start;
