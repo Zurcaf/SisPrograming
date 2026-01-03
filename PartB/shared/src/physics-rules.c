@@ -217,14 +217,14 @@ void new_ship_position(ship_t *ships, int total_ships,
  */
 void correct_position(float *position, int edge_size)
 {
-    if (*position < 0)
+    // Keep coordinates in [0, edge_size) using modular wrap.
+    // Handles large jumps across multiple widths/heights cleanly.
+    float wrapped = fmodf(*position, (float)edge_size);
+    if (wrapped < 0)
     {
-        *position = edge_size; // Wrap to opposite side
+        wrapped += edge_size;
     }
-    if (*position > edge_size)
-    {
-        *position = 0; // Wrap to opposite side
-    }
+    *position = wrapped;
 }
 
 /**
