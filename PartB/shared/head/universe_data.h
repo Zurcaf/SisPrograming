@@ -19,7 +19,8 @@ typedef struct ship ship_t;
 
 trash_t *init_trash(int n, int max, int width, int height);
 planet_t *init_planets(int n, int width, int height);
-void addTrash(int n_trash, trash_t *trash, int width, int height);
+// Reuse freed trash slots (mass <= 0) before growing count. Updates n_trash when a new slot is used.
+bool addTrash(trash_t *trash, int *n_trash, int max, int width, int height);
 ship_t *init_ship(int capacity);
 void handle_data(ship_t *ship, char direction, trash_t *trash, planet_t *planets,
                  int width, int height, int n_trash, int n_planets, int ship_index);

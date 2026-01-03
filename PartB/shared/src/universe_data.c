@@ -75,16 +75,39 @@ planet_t *init_planets(int n, int width, int height)
     return planets;
 }
 
-void addTrash(int n_trash, trash_t *trash, int width, int height)
+bool addTrash(trash_t *trash, int *n_trash, int max, int width, int height)
 {
-    // Initialize a new trash object at the given index
-    trash[n_trash].x = rand() % width;
-    trash[n_trash].y = rand() % height;
-    trash[n_trash].mass = 1; // 1 mass unit
-    trash[n_trash].velocity.amplitude = 0;
-    trash[n_trash].velocity.angle = 0;
-    trash[n_trash].acceleration.amplitude = 0;
-    trash[n_trash].acceleration.angle = 0;
+    int idx = -1;
+
+    // Try to reuse an empty slot
+    for (int i = 0; i < *n_trash; i++)
+    {
+        if (trash[i].mass <= 0)
+        {
+            idx = i;
+            break;
+        }
+    }
+
+    // Otherwise append if there is capacity
+    if (idx == -1)
+    {
+        if (*n_trash >= max)
+        {
+            return false;
+        }
+        idx = *n_trash;
+        (*n_trash)++;
+    }
+
+    trash[idx].x = rand() % width;
+    trash[idx].y = rand() % height;
+    trash[idx].mass = 1; // 1 mass unit
+    trash[idx].velocity.amplitude = 0;
+    trash[idx].velocity.angle = 0;
+    trash[idx].acceleration.amplitude = 0;
+    trash[idx].acceleration.angle = 0;
+    return true;
 }
 
 ship_t *init_ship(int capacity)

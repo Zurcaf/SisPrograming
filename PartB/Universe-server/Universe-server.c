@@ -128,11 +128,13 @@ int main()
         // Collision-based trash only if there is at least one ship in the universe
         if (has_ship && check4collisions(trash, &n_trash, planets, n_planets))
         {
-            if (n_trash < max_n_trash)
+            if (addTrash(trash, &n_trash, max_n_trash, width, height))
             {
-                addTrash(n_trash, trash, width, height);
-                n_trash++;
                 printf("Collision detected! New trash created. Total trash: %d\n", n_trash);
+            }
+            else
+            {
+                printf("Max trash capacity reached!\n");
             }
         }
 
@@ -141,11 +143,13 @@ int main()
         // Periodic trash spawn every 10s if ships exist
         if (has_ship && (now_ms - last_trash_spawn_ms) >= trash_spawn_interval_ms)
         {
-            if (n_trash < max_n_trash)
+            if (addTrash(trash, &n_trash, max_n_trash, width, height))
             {
-                addTrash(n_trash, trash, width, height);
-                n_trash++;
                 printf("Periodic trash spawn. Total trash: %d\n", n_trash);
+            }
+            else
+            {
+                printf("Periodic spawn skipped: max trash reached.\n");
             }
             last_trash_spawn_ms = now_ms;
         }
@@ -195,7 +199,7 @@ int main()
             msgbox.flags = SDL_MESSAGEBOX_ERROR;
             msgbox.window = win;
             msgbox.title = "Game Over";
-            msgbox.message = "Game Over\nThe Universe is Full Off Trash! Humanity is Doomed!";
+            msgbox.message = "The Universe is Full Off Trash! Humanity is Doomed!";
             msgbox.colorScheme = &scheme;
 
             SDL_ShowMessageBox(&msgbox, NULL);
