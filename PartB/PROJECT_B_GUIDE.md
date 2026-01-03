@@ -24,6 +24,7 @@ O Projeto B expande o Projeto A com um sistema distribuído completo:
 **Substitui:** universe-simulator + universe-server da Parte A
 
 **Funcionalidades principais:**
+
 - Simula todo o universo (planetas + lixo + trash-ships)
 - Aplica regras de física a trash-ships
 - Gera lixo periodicamente (10s)
@@ -33,16 +34,18 @@ O Projeto B expande o Projeto A com um sistema distribuído completo:
 - Aplica física a 100Hz (10ms)
 
 **Tarefas:**
-- [ ] Criar estrutura básica do servidor
-- [ ] Implementar sockets ZMQ (REQ/REP + PUB)
-- [ ] Adicionar data structures para trash-ships
-- [ ] Implementar loop de física (10ms)
+
+- [x] Criar estrutura básica do servidor
+- [x] Implementar sockets ZMQ (REQ/REP + PUB)
+- [x] Adicionar data structures para trash-ships
+- [x] Implementar loop de física (10ms)
 - [ ] Implementar geração periódica de lixo (10s)
 - [ ] Implementar mudança de planeta reciclador (30s)
-- [ ] Implementar display update (33ms)
+- [x] Implementar display update (33ms)
 - [ ] Adicionar tratamento de desconexões
 
 **Operação do servidor:**
+
 ```
 Inicialização
 ├── Ler configurações
@@ -70,6 +73,7 @@ Loop principal (concorrente):
 **Substitui:** universe-client da Parte A
 
 **Funcionalidades:**
+
 - Conecta ao servidor via ZMQ
 - Captura teclas do teclado (SDL)
 - Envia comandos de movimento (thrust)
@@ -77,14 +81,16 @@ Loop principal (concorrente):
 - Display idêntico ao servidor
 
 **Tarefas:**
-- [ ] Criar janela SDL para visualização
-- [ ] Implementar leitura de teclas
+
+- [x] Criar janela SDL para visualização
+- [x] Implementar leitura de teclas
 - [ ] Implementar socket cliente ZMQ
 - [ ] Receber e processar estado do universo
 - [ ] Desenhar universo completo (planetas, lixo, ships)
 - [ ] Sincronizar display com servidor
 
 **Operação do cliente:**
+
 ```
 Inicialização
 ├── Ler configurações
@@ -108,6 +114,7 @@ Loop principal (concorrente):
 **Nova aplicação independente** (Python ou Java)
 
 **Exibe estatísticas:**
+
 - Lixo reciclado por planeta
 - Cargo atual de cada trash-ship
 - Total de lixo no universo
@@ -116,6 +123,7 @@ Loop principal (concorrente):
 **Não requer SDL** - apenas output de texto
 
 **Exemplo de output:**
+
 ```
 === SPACE TRASH DASHBOARD ===
 Universe Status: 15/20 trash (75% capacity)
@@ -133,6 +141,7 @@ Recycling Planet: B
 ```
 
 **Tarefas:**
+
 - [ ] Escolher linguagem (Python recomendado)
 - [ ] Implementar socket ZMQ subscriber
 - [ ] Processar mensagens do servidor
@@ -144,6 +153,7 @@ Recycling Planet: B
 ## ⚛️ Sistema de Física
 
 ### Constantes
+
 ```c
 planet_mass = 10;           // mass units
 trash_mass = 1;             // mass units
@@ -156,6 +166,7 @@ friction = 0.99;            // 1% redução por time unit
 ### Física das Trash-Ships
 
 **IMPORTANTE:** Trash-ships agora têm:
+
 - **Inertia** - continuam em movimento mesmo sem comandos
 - **Velocity** afetada por gravidade
 - **Friction** - reduz 1% velocidade por frame
@@ -182,21 +193,24 @@ void new_trash_position(trash_structure trash[], int total_trash);
 ### Thrust (Comandos do Jogador)
 
 **Solução Simples (Recomendada):**
+
 - Capturar eventos SDL_KEYDOWN
 - Enviar mensagem de thrust ao servidor
 - Servidor aplica força instantânea na direção correspondente
 - Força gera aceleração → modifica velocidade
 
 **Solução Avançada (Opcional):**
+
 - Capturar SDL_KEYDOWN e SDL_KEYUP
 - Enviar "pedal down" / "pedal up"
 - Servidor aplica força contínua enquanto tecla pressionada
 
 **Tarefas:**
-- [ ] Adaptar funções de física para trash-ships
-- [ ] Implementar thrust como força instantânea
-- [ ] Aplicar friction às ships
-- [ ] Testar movimento realista com inércia
+
+- [x] Adaptar funções de física para trash-ships
+- [x] Implementar thrust como força instantânea
+- [x] Aplicar friction às ships
+- [x] Testar movimento realista com inércia
 
 ---
 
@@ -205,24 +219,29 @@ void new_trash_position(trash_structure trash[], int total_trash);
 Diferentes frequências para diferentes tarefas:
 
 ### 1. Física: **10ms (100Hz)**
+
 - Aplicar aceleração, velocidade, posição
 - Para trash **E** trash-ships
 - **Mais crítico** - define a fluidez do jogo
 
 ### 2. Display: **33ms (30Hz)**
+
 - Atualizar janela SDL
 - Enviar estado aos clientes
 - Menos frequente que física para performance
 
 ### 3. Geração de lixo: **10s (0.1Hz)**
+
 - Criar novo lixo em posição aleatória
 - **Apenas quando há trash-ships ativos**
 
 ### 4. Mudança de reciclador: **30s**
+
 - Escolher novo planeta aleatoriamente
 - Notificar todos os clientes
 
 **Implementação sugerida:**
+
 ```c
 // Usar timers separados ou timestamps
 typedef struct {
@@ -235,25 +254,26 @@ typedef struct {
 // No loop principal
 while (running) {
     uint64_t now = get_time_ms();
-    
+
     if (now - timers.last_physics >= 10) {
         update_physics();
         timers.last_physics = now;
     }
-    
+
     if (now - timers.last_display >= 33) {
         update_display();
         broadcast_state();
         timers.last_display = now;
     }
-    
+
     // ... etc
 }
 ```
 
 **Tarefas:**
-- [ ] Implementar timer para física (10ms)
-- [ ] Implementar timer para display (33ms)
+
+- [x] Implementar timer para física (10ms)
+- [x] Implementar timer para display (33ms)
 - [ ] Implementar timer para lixo (10s)
 - [ ] Implementar timer para reciclador (30s)
 - [ ] Garantir que timers não bloqueiam
@@ -265,14 +285,17 @@ while (running) {
 ### Arquitetura ZMQ
 
 **SERVER:**
+
 - Socket **REQ/REP** - receber comandos dos clientes
 - Socket **PUB** - broadcast do estado do universo
 
 **CLIENT:**
+
 - Socket **REQ** - enviar comandos
 - Socket **SUB** - receber updates
 
 **DASHBOARD:**
+
 - Socket **SUB** - receber estatísticas
 
 ### Protocol Buffers - Mensagens
@@ -356,16 +379,18 @@ message DashboardStats {
 ### ⚠️ ZMQ NÃO É THREAD-SAFE!
 
 **REGRAS CRÍTICAS:**
+
 - Apenas **1 thread** usa socket REQ
 - Apenas **1 thread** usa socket PUB
 - Nunca partilhar sockets entre threads
 - Usar mutexes para dados partilhados, não para sockets
 
 **Tarefas:**
-- [ ] Desenhar arquitetura de mensagens
-- [ ] Criar ficheiros .proto
-- [ ] Compilar protocol buffers
-- [ ] Implementar serialização/deserialização
+
+- [x] Desenhar arquitetura de mensagens
+- [x] Criar ficheiros .proto
+- [x] Compilar protocol buffers
+- [x] Implementar serialização/deserialização
 - [ ] Testar comunicação básica
 - [ ] Implementar detecção de desconexão
 
@@ -376,6 +401,7 @@ message DashboardStats {
 Usar **libconfig++** para ler configurações.
 
 ### new-universe-server.cfg
+
 ```
 # Server configuration
 server:
@@ -396,6 +422,7 @@ universe:
 ```
 
 ### new-trash-ship-client.cfg
+
 ```
 # Client configuration
 server:
@@ -412,6 +439,7 @@ universe:
 ```
 
 ### new-dashboard.cfg
+
 ```
 # Dashboard configuration
 server:
@@ -421,6 +449,7 @@ server:
 ```
 
 **Tarefas:**
+
 - [ ] Criar estrutura dos ficheiros .cfg
 - [ ] Implementar leitura com libconfig++
 - [ ] Validar configurações
@@ -455,12 +484,14 @@ Timer Threads (ou integrados)
 ### Sincronização
 
 **Dados partilhados que precisam de mutex:**
+
 - Array de planetas
 - Array de lixo
 - Array de trash-ships
 - Estado do universo
 
 **Exemplo:**
+
 ```c
 pthread_mutex_t universe_mutex;
 
@@ -480,6 +511,7 @@ zmq_send(pub_socket, &state, size, 0);
 ### Limitações do SDL
 
 ⚠️ **SDL NÃO É THREAD-SAFE:**
+
 - Criação de janelas → **main thread**
 - Desenhar na janela → **main thread**
 - SDL_PollEvent / SDL_WaitEvent → **main thread**
@@ -488,11 +520,12 @@ zmq_send(pub_socket, &state, size, 0);
 **Solução:** Usar SDL_PushEvent para notificar main thread de outras threads.
 
 **Tarefas:**
-- [ ] Criar threads com pthread
-- [ ] Implementar mutexes para dados partilhados
-- [ ] Garantir que apenas 1 thread usa cada socket
+
+- [x] Criar threads com pthread
+- [x] Implementar mutexes para dados partilhados
+- [x] Garantir que apenas 1 thread usa cada socket
 - [ ] Testar concorrência sem race conditions
-- [ ] Garantir desenho apenas na main thread
+- [x] Garantir desenho apenas na main thread
 
 ---
 
@@ -500,51 +533,61 @@ zmq_send(pub_socket, &state, size, 0);
 
 Seguir esta ordem para melhor progressão:
 
-1. [ ] **Renomear universe-simulator → new-universe-server**
+1. [x] **Renomear universe-simulator → new-universe-server**
+
    - Ponto de partida, reutilizar código da Parte A
 
-2. **[ ] Geração periódica de lixo (10s)**
+2. [ ] **Geração periódica de lixo (10s)**
+
    - Implementar timer
    - Gerar lixo em posição aleatória
 
-3. **[ ] Mudança periódica do planeta reciclador (30s)**
+3. [ ] **Mudança periódica do planeta reciclador (30s)**
+
    - Timer de 30s
    - Escolha aleatória de planeta
 
-4. **[ ] Display update rate de 30Hz (33ms)**
+4. [x] **Display update rate de 30Hz (33ms)**
+
    - Separar física (10ms) de display (33ms)
    - Otimizar performance
 
-5. **[ ] Renomear universe-client → new-trash-ship-client**
+5. [x] **Renomear universe-client → new-trash-ship-client**
+
    - Base para o novo cliente
 
-6. **[ ] Integrar estruturas de trash-ships no servidor**
+6. [x] **Integrar estruturas de trash-ships no servidor**
+
    - Adicionar arrays e structs
    - Funções de gestão
 
-7. **[ ] Sockets e comunicação no servidor**
-   - a) **[ ]** Aceitar conexões de clientes
-   - b) **[ ]** Receber e processar comandos de movimento
+7. [x] **Sockets e comunicação no servidor**
 
-8. **[ ] Aplicar regras de física às trash-ships**
+   - [x] a) Aceitar conexões de clientes
+   - [x] b) Receber e processar comandos de movimento
+
+8. [x] **Aplicar regras de física às trash-ships**
+
    - Inércia, gravidade, friction
    - Thrust como força
 
-9. **[ ] Display do universo no cliente**
-   - a) **[ ]** Criar janela SDL
-   - b) **[ ]** Receber e processar estado do universo
-   - c) **[ ]** Desenhar tudo (planetas, lixo, ships)
+9. [ ] **Display do universo no cliente**
 
-10. **[ ] Implementar new-dashboard**
+   - [x] a) Criar janela SDL
+   - [ ] b) Receber e processar estado do universo
+   - [ ] c) Desenhar tudo (planetas, lixo, ships)
+
+10. [ ] **Implementar new-dashboard**
+
     - Escolher linguagem
     - Socket subscriber
     - Display de estatísticas
 
-11. **[ ] Todas as outras funcionalidades**
-    - Colisões
-    - Reciclagem
-    - Validações
-    - Tratamento de erros
+11. [x] **Colisões**
+    - Ship-trash collisions (coleta)
+    - Ship-planet collisions (reciclagem/despejo)
+    - [ ] Validações adicionais
+    - [ ] Tratamento de erros
 
 ---
 
@@ -560,6 +603,7 @@ Seguir esta ordem para melhor progressão:
 ### Validações Necessárias
 
 **No Servidor:**
+
 ```c
 // 1. Capacidade da ship
 if (ship->cargo >= ship->capacity) {
@@ -594,14 +638,16 @@ if (collides_with_planet(ship, recycler_planet)) {
 ### Comportamentos Especiais
 
 **Quando não há trash-ships ativos:**
+
 - Parar geração de lixo
 - Lixo que bate em planetas não gera novo lixo
 
 **Tarefas:**
-- [ ] Implementar verificação de capacidade
-- [ ] Implementar limite de conexões
-- [ ] Implementar detecção de colapso
-- [ ] Notificar clientes apropriadamente
+
+- [x] Implementar verificação de capacidade
+- [x] Implementar limite de conexões
+- [x] Implementar detecção de colapso
+- [x] Notificar clientes apropriadamente
 - [ ] Testar todos os edge cases
 
 ---
@@ -611,6 +657,7 @@ if (collides_with_planet(ship, recycler_planet)) {
 ### Princípios
 
 **Nunca confiar no cliente!**
+
 - Cliente pode estar modificado
 - Mensagens podem estar adulteradas
 - Ordem pode estar errada
@@ -667,8 +714,9 @@ if (ship->state == DISCONNECTED) {
 ```
 
 **Tarefas:**
-- [ ] Validar estrutura das mensagens
-- [ ] Verificar se cliente pode executar ação
+
+- [x] Validar estrutura das mensagens
+- [x] Verificar se cliente pode executar ação
 - [ ] Prevenir movimento de ships alheias
 - [ ] Rate limiting de comandos
 - [ ] Testar com "cliente malicioso"
@@ -703,12 +751,14 @@ new-dashboard/
 ### Reutilização da Parte A
 
 Reutilizar e evoluir:
+
 - ✓ Data structures (planetas, lixo)
 - ✓ Funções de física
 - ✓ Funções de desenho SDL
 - ✓ Estrutura básica
 
 Adicionar:
+
 - ✓ Trash-ships data structures
 - ✓ Threads
 - ✓ ZMQ + Protocol Buffers
@@ -772,16 +822,16 @@ projeto_B_grupo_XX.zip
 
 ### Checklist Final
 
-- [ ] Todos os 3 componentes compilam
-- [ ] Makefiles funcionam
+- [x] Todos os 3 componentes compilam
+- [x] Makefiles funcionam
 - [ ] Ficheiros de configuração funcionam
 - [ ] Múltiplos clientes conectam simultaneamente
-- [ ] Física funciona corretamente
+- [x] Física funciona corretamente
 - [ ] Display sincronizado entre servidor e clientes
 - [ ] Dashboard exibe estatísticas
 - [ ] Desconexões são tratadas
-- [ ] Anti-cheating implementado
-- [ ] Código comentado
+- [x] Anti-cheating implementado (parcial)
+- [x] Código comentado
 - [ ] Sem memory leaks (testar com valgrind)
 - [ ] Sem race conditions
 
