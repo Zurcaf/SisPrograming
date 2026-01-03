@@ -84,16 +84,16 @@ int main()
                     if (read_message(fd, message_type, &ship_id, &direction) != -1)
                     {
                         int index = ship_index(ship_id);
-                        if (strcmp("CONNECT", message_type) == 0 && ship[index].current_load == -1)
+                        if (strcmp("CONNECT", message_type) == 0 && ship_get_load_at(ship, index) == -1)
                         {
                             if (index != -1)
                             {
-                                ship[index].current_load = 0;
+                                ship_set_load_at(ship, index, 0);
                             }
                         }
                         else
                         {
-                            if (strcmp("MOVE", message_type) == 0 && ship[index].current_load != -1)
+                            if (strcmp("MOVE", message_type) == 0 && ship_get_load_at(ship, index) != -1)
                             {
                                 handle_data(ship, direction, trash, planets, width, height, n_trash, n_planets, index);
                             }

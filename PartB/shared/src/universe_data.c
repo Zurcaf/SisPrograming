@@ -1,5 +1,27 @@
 #include "../head/universe_data.h"
 
+// Concrete definitions (hidden from header for data abstraction)
+struct planet
+{
+    float x, y;
+    float mass;
+};
+
+struct trash
+{
+    float x, y;
+    vector_t velocity;
+    vector_t acceleration;
+    float mass;
+};
+
+struct ship
+{
+    float x, y;
+    int capacity;
+    int current_load;
+};
+
 trash_t *init_trash(int n, int max, int width, int height)
 {
     trash_t *trash = malloc(max * sizeof(trash_t));
@@ -167,3 +189,73 @@ int ship_index(char id)
         return 26 + (id - 'a');
     return -1; // invalid / trash input
 }
+
+// ----------------------
+// Planet accessors
+// ----------------------
+float planet_get_x(const planet_t *p) { return p->x; }
+float planet_get_y(const planet_t *p) { return p->y; }
+float planet_get_mass(const planet_t *p) { return p->mass; }
+void planet_set_mass(planet_t *p, float mass) { p->mass = mass; }
+float planet_get_x_at(const planet_t *list, int idx) { return list[idx].x; }
+float planet_get_y_at(const planet_t *list, int idx) { return list[idx].y; }
+float planet_get_mass_at(const planet_t *list, int idx) { return list[idx].mass; }
+void planet_set_mass_at(planet_t *list, int idx, float mass) { list[idx].mass = mass; }
+
+// ----------------------
+// Trash accessors
+// ----------------------
+float trash_get_x(const trash_t *t) { return t->x; }
+float trash_get_y(const trash_t *t) { return t->y; }
+float trash_get_mass(const trash_t *t) { return t->mass; }
+vector_t trash_get_velocity(const trash_t *t) { return t->velocity; }
+vector_t trash_get_acceleration(const trash_t *t) { return t->acceleration; }
+void trash_set_position(trash_t *t, float x, float y)
+{
+    t->x = x;
+    t->y = y;
+}
+void trash_set_mass(trash_t *t, float mass) { t->mass = mass; }
+void trash_set_velocity(trash_t *t, vector_t v) { t->velocity = v; }
+void trash_set_acceleration(trash_t *t, vector_t a) { t->acceleration = a; }
+float trash_get_x_at(const trash_t *list, int idx) { return list[idx].x; }
+float trash_get_y_at(const trash_t *list, int idx) { return list[idx].y; }
+float trash_get_mass_at(const trash_t *list, int idx) { return list[idx].mass; }
+vector_t trash_get_velocity_at(const trash_t *list, int idx) { return list[idx].velocity; }
+vector_t trash_get_acceleration_at(const trash_t *list, int idx) { return list[idx].acceleration; }
+void trash_set_position_at(trash_t *list, int idx, float x, float y)
+{
+    list[idx].x = x;
+    list[idx].y = y;
+}
+void trash_set_mass_at(trash_t *list, int idx, float mass) { list[idx].mass = mass; }
+void trash_set_velocity_at(trash_t *list, int idx, vector_t v) { list[idx].velocity = v; }
+void trash_set_acceleration_at(trash_t *list, int idx, vector_t a) { list[idx].acceleration = a; }
+
+// ----------------------
+// Ship accessors
+// ----------------------
+float ship_get_x(const ship_t *s) { return s->x; }
+float ship_get_y(const ship_t *s) { return s->y; }
+int ship_get_capacity(const ship_t *s) { return s->capacity; }
+int ship_get_load(const ship_t *s) { return s->current_load; }
+void ship_set_position(ship_t *s, float x, float y)
+{
+    s->x = x;
+    s->y = y;
+}
+void ship_set_load(ship_t *s, int load) { s->current_load = load; }
+void ship_increment_load(ship_t *s) { s->current_load++; }
+void ship_reset_load(ship_t *s) { s->current_load = 0; }
+float ship_get_x_at(const ship_t *list, int idx) { return list[idx].x; }
+float ship_get_y_at(const ship_t *list, int idx) { return list[idx].y; }
+int ship_get_capacity_at(const ship_t *list, int idx) { return list[idx].capacity; }
+int ship_get_load_at(const ship_t *list, int idx) { return list[idx].current_load; }
+void ship_set_position_at(ship_t *list, int idx, float x, float y)
+{
+    list[idx].x = x;
+    list[idx].y = y;
+}
+void ship_set_load_at(ship_t *list, int idx, int load) { list[idx].current_load = load; }
+void ship_increment_load_at(ship_t *list, int idx) { list[idx].current_load++; }
+void ship_reset_load_at(ship_t *list, int idx) { list[idx].current_load = 0; }

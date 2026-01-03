@@ -25,10 +25,10 @@ void new_trash_acceleration(planet_t *planets, int total_planets,
     for (int n_trash = 0; n_trash < total_trash; n_trash++)
     {
         // Skip trash that has been collected (mass = -1 or 0)
-        if (trash[n_trash].mass <= 0)
+        if (trash_get_mass_at(trash, n_trash) <= 0)
         {
-            trash[n_trash].acceleration.amplitude = 0;
-            trash[n_trash].acceleration.angle = 0;
+            vector_t zero = {0};
+            trash_set_acceleration_at(trash, n_trash, zero);
             continue;
         }
 
@@ -38,8 +38,8 @@ void new_trash_acceleration(planet_t *planets, int total_planets,
         // Calculate gravitational force from each planet
         for (int n_planet = 0; n_planet < total_planets; n_planet++)
         {
-            float force_vector_x = planets[n_planet].x - trash[n_trash].x;
-            float force_vector_y = planets[n_planet].y - trash[n_trash].y;
+            float force_vector_x = planet_get_x_at(planets, n_planet) - trash_get_x_at(trash, n_trash);
+            float force_vector_y = planet_get_y_at(planets, n_planet) - trash_get_y_at(trash, n_trash);
             vector_t local_vector_force = make_vector(force_vector_x, force_vector_y);
 
             // Apply inverse square law
@@ -48,13 +48,13 @@ void new_trash_acceleration(planet_t *planets, int total_planets,
                 distance = 0.001;
 
             // F = (M * m) / r^2
-            local_vector_force.amplitude = (planets[n_planet].mass * trash[n_trash].mass) / (distance * distance);
+            local_vector_force.amplitude = (planet_get_mass_at(planets, n_planet) * trash_get_mass_at(trash, n_trash)) / (distance * distance);
 
             // Sum all forces
             total_vector_force = add_vectors(local_vector_force, total_vector_force);
         }
 
-        trash[n_trash].acceleration = total_vector_force;
+        trash_set_acceleration_at(trash, n_trash, total_vector_force);
     }
 }
 
@@ -68,14 +68,14 @@ void new_trash_velocity(trash_t *trash, int total_trash)
     for (int n_trash = 0; n_trash < total_trash; n_trash++)
     {
         // Skip collected trash
-        if (trash[n_trash].mass <= 0)
+        if (trash_get_mass_at(trash, n_trash) <= 0)
             continue;
 
         // Apply friction (damping)
-        trash[n_trash].velocity.amplitude *= 0.99;
-
-        // Add acceleration to velocity
-        trash[n_trash].velocity = add_vectors(trash[n_trash].velocity, trash[n_trash].acceleration);
+        vector_t vel = trash_get_velocity_at(trash, n_trash);
+        vel.amplitude *= 0.99;
+        vel = add_vectors(vel, trash_get_acceleration_at(trash, n_trash));
+        trash_set_velocity_at(trash, n_trash, vel);
     }
 }
 
@@ -90,16 +90,21 @@ void new_trash_position(trash_t *trash, int total_trash,
     for (int n_trash = 0; n_trash < total_trash; n_trash++)
     {
         // Skip collected trash
-        if (trash[n_trash].mass <= 0)
+        if (trash_get_mass_at(trash, n_trash) <= 0)
             continue;
 
         // Update position based on velocity vector
-        trash[n_trash].x += trash[n_trash].velocity.amplitude * cos(trash[n_trash].velocity.angle);
-        trash[n_trash].y += trash[n_trash].velocity.amplitude * sin(trash[n_trash].velocity.angle);
+        vector_t vel = trash_get_velocity_at(trash, n_trash);
+        float new_x = trash_get_x_at(trash, n_trash) + vel.amplitude * cos(vel.angle);
+        float new_y = trash_get_y_at(trash, n_trash) + vel.amplitude * sin(vel.angle);
+        trash_set_position_at(trash, n_trash, new_x, new_y);
 
         // Wrap around edges (toroidal topology)
-        correct_position(&trash[n_trash].x, universe_width);
-        correct_position(&trash[n_trash].y, universe_height);
+        float adj_x = trash_get_x_at(trash, n_trash);
+        float adj_y = trash_get_y_at(trash, n_trash);
+        correct_position(&adj_x, universe_width);
+        correct_position(&adj_y, universe_height);
+        trash_set_position_at(trash, n_trash, adj_x, adj_y);
     }
 }
 
@@ -154,8 +159,8 @@ bool check4collisions(trash_t *trash, int *n_trash,
     {
         for (int j = 0; j < *n_trash; j++)
         {
-            float dx = planets[i].x - trash[j].x;
-            float dy = planets[i].y - trash[j].y;
+            float dx = planet_get_x_at(planets, i) - trash_get_x_at(trash, j);
+            float dy = planet_get_y_at(planets, i) - trash_get_y_at(trash, j);
             float distance = sqrt(dx * dx + dy * dy);
 
             // Collision threshold

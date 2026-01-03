@@ -55,5 +55,16 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+  "C_Cpp_Runner.msvcSecureNoWarnings": false,
+  
+  "workbench.colorCustomizations": {
+  "terminal.foreground": "#D4D4D4",
+  "terminal.background": "#1E1E1E",
+
+  "terminal.ansiGreen": "#6A9955",
+  "terminal.ansiRed": "#F44747",
+  "terminal.ansiYellow": "#DCDCAA",
+  "terminal.ansiBlue": "#569CD6"
+}
+
 }
