@@ -14,6 +14,11 @@ PartA/Universe-simulator/universe_simulator
 # PartB executables (centralizados em 0Executaveis)
 PartB/0Executaveis/*
 
+# init.conf
+PartA/libconfig/init.conf
+PartB/libconfig/init.conf
+
+
 # Diretórios de build
 */obj/
 */build/
