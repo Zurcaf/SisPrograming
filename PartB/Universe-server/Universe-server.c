@@ -53,6 +53,11 @@ int main()
     trash_t *trash = init_trash(n_trash, max_n_trash, width, height);
     ship_t *ship = init_ship(capacity_ship);
 
+    Uint32 last_trash_spawn_ms = SDL_GetTicks();
+    Uint32 last_recycle_ms = SDL_GetTicks();
+    const Uint32 trash_spawn_interval_ms = 10000;  // 10s
+    const Uint32 recycle_rotate_interval_ms = 30000; // 30s
+
     bool running = 1;
     char message_type[1024];
     char ship_id;
@@ -108,8 +113,19 @@ int main()
         // Update physics every frame
         update_physics(trash, n_trash, planets, n_planets, ship, MAX_SHIPS, width, height);
 
-        // Check for collisions and generate new trash if collision detected
-        if (check4collisions(trash, &n_trash, planets, n_planets))
+        // Determine if there is any connected ship in the universe
+        bool has_ship = false;
+        for (int si = 0; si < MAX_SHIPS; si++)
+        {
+            if (ship_get_load_at(ship, si) >= 0)
+            {
+                has_ship = true;
+                break;
+            }
+        }
+
+        // Collision-based trash only if there is at least one ship in the universe
+        if (has_ship && check4collisions(trash, &n_trash, planets, n_planets))
         {
             if (n_trash < max_n_trash)
             {
@@ -121,6 +137,47 @@ int main()
             {
                 printf("Max trash capacity reached!\n");
             }
+        }
+
+        Uint32 now_ms = SDL_GetTicks();
+
+        // Periodic trash spawn every 10s if ships exist
+        if (has_ship && (now_ms - last_trash_spawn_ms) >= trash_spawn_interval_ms)
+        {
+            if (n_trash < max_n_trash)
+            {
+                addTrash(n_trash, trash, width, height);
+                n_trash++;
+                printf("Periodic trash spawn. Total trash: %d\n", n_trash);
+            }
+            else
+            {
+                printf("Periodic spawn skipped: max trash reached.\n");
+            }
+            last_trash_spawn_ms = now_ms;
+        }
+
+        // Rotate recycling planet every 30s
+        if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
+        {
+            // Find current recycling planet
+            int current = -1;
+            for (int pi = 0; pi < n_planets; pi++)
+            {
+                if (planet_get_mass_at(planets, pi) == 0)
+                {
+                    current = pi;
+                    break;
+                }
+            }
+            if (current >= 0)
+            {
+                int next = (current + 1) % n_planets;
+                planet_set_mass_at(planets, current, 10);
+                planet_set_mass_at(planets, next, 0);
+                printf("Recycling planet rotated to index %d\n", next);
+            }
+            last_recycle_ms = now_ms;
         }
 
         // Render every frame
