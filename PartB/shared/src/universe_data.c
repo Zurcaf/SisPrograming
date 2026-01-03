@@ -56,7 +56,7 @@ void addTrash(int n_trash, trash_t *trash, int width, int height)
     // Initialize a new trash object at the given index
     trash[n_trash].x = rand() % width;
     trash[n_trash].y = rand() % height;
-    trash[n_trash].mass = 1;   // 1 mass unit
+    trash[n_trash].mass = 1; // 1 mass unit
     trash[n_trash].velocity.amplitude = 0;
     trash[n_trash].velocity.angle = 0;
     trash[n_trash].acceleration.amplitude = 0;
@@ -84,22 +84,24 @@ ship_t *init_ship(int capacity)
 void handle_data(ship_t *ship, char direction, trash_t *trash, planet_t *planets,
                  int width, int height, int n_trash, int n_planets, int ship_index)
 {
+    const int SHIP_SPEED = 10; // Increased from 3 to 10 for faster movement
+
     switch (direction)
     {
     case 'u':
-        ship[ship_index].y -= 3;
+        ship[ship_index].y -= SHIP_SPEED;
         correct_position(&ship[ship_index].y, height);
         break;
     case 'd':
-        ship[ship_index].y += 3;
+        ship[ship_index].y += SHIP_SPEED;
         correct_position(&ship[ship_index].y, height);
         break;
     case 'r':
-        ship[ship_index].x += 3;
+        ship[ship_index].x += SHIP_SPEED;
         correct_position(&ship[ship_index].x, width);
         break;
     case 'l':
-        ship[ship_index].x -= 3;
+        ship[ship_index].x -= SHIP_SPEED;
         correct_position(&ship[ship_index].x, width);
         break;
     }
