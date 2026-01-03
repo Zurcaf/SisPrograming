@@ -4,6 +4,12 @@
 
 CC = gcc
 
+# Optional AddressSanitizer (enable with ASAN=1)
+ASAN_FLAGS :=
+ifeq ($(ASAN),1)
+    ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
+endif
+
 # Detect OS and set PKG_CONFIG_PATH accordingly
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -27,10 +33,12 @@ CFLAGS = -Wall -Wextra -std=c11 -g \
          -I$(LIBCONFIG_DIR) \
          $(EXTRA_INCLUDES) \
          $(shell sdl2-config --cflags) \
-         $(shell pkg-config --cflags libconfig++ libprotobuf-c libzmq)
+         $(shell pkg-config --cflags libconfig++ libprotobuf-c libzmq) \
+         $(ASAN_FLAGS)
 
 LDFLAGS = $(shell sdl2-config --libs) \
-          $(shell pkg-config --libs libconfig++ libprotobuf-c libzmq) -lm
+          $(shell pkg-config --libs libconfig++ libprotobuf-c libzmq) -lm \
+          $(ASAN_FLAGS)
 
 # Executable name
 CLIENT_BIN = $(BIN_DIR)/trash-ship-client

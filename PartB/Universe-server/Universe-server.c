@@ -30,7 +30,30 @@ Uint32 timer_callback(Uint32 interval, void *param)
 int main()
 {
 
-    load_config("../libconfig/init.conf");
+    // Try multiple config paths
+    const char *config_paths[] = {
+        "libconfig/init.conf",            // From PartB root
+        "../libconfig/init.conf",         // From Universe-server dir
+        "../../PartB/libconfig/init.conf" // From other locations
+    };
+    int config_loaded = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        load_config(config_paths[i]);
+        // Verify config loaded by checking a value
+        if (get_width_universe_int() > 0)
+        {
+            config_loaded = 1;
+            printf("Config loaded from: %s\n", config_paths[i]);
+            break;
+        }
+    }
+    if (!config_loaded)
+    {
+        fprintf(stderr, "Failed to load config from any path\n");
+        return EXIT_FAILURE;
+    }
+
     int width = get_width_universe_int();
     int height = get_height_universe_int();
     int n_trash = get_init_n_trash_int();
@@ -55,7 +78,7 @@ int main()
 
     Uint32 last_trash_spawn_ms = SDL_GetTicks();
     Uint32 last_recycle_ms = SDL_GetTicks();
-    const Uint32 trash_spawn_interval_ms = 10000;  // 10s
+    const Uint32 trash_spawn_interval_ms = 10000;    // 10s
     const Uint32 recycle_rotate_interval_ms = 30000; // 30s
 
     bool running = 1;
@@ -187,13 +210,12 @@ int main()
 
             SDL_MessageBoxColorScheme scheme = {
                 .colors = {
-                    {255, 0, 0},   // background red
-                    {0, 0, 0},     // text black
-                    {0, 0, 0},     // button border black
-                    {0, 0, 0},     // button background black
-                    {255, 0, 0}    // button selected (red)
-                }
-            };
+                    {255, 0, 0}, // background red
+                    {0, 0, 0},   // text black
+                    {0, 0, 0},   // button border black
+                    {0, 0, 0},   // button background black
+                    {255, 0, 0}  // button selected (red)
+                }};
 
             SDL_MessageBoxData msgbox = {0};
             msgbox.flags = SDL_MESSAGEBOX_ERROR;
