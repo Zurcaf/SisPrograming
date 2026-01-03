@@ -74,5 +74,13 @@ void ship_set_position_at(ship_t *list, int idx, float x, float y);
 void ship_set_load_at(ship_t *list, int idx, int load);
 void ship_increment_load_at(ship_t *list, int idx);
 void ship_reset_load_at(ship_t *list, int idx);
+vector_t ship_get_velocity_at(const ship_t *list, int idx);
+vector_t ship_get_acceleration_at(const ship_t *list, int idx);
+void ship_set_velocity_at(ship_t *list, int idx, vector_t v);
+void ship_set_acceleration_at(ship_t *list, int idx, vector_t a);
+
+// Ship constants
+#define SHIP_MASS 1.0f
+#define MAX_SHIPS 52
 
 #endif

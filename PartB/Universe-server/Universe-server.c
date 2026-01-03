@@ -106,7 +106,7 @@ int main()
         }
 
         // Update physics every frame
-        update_physics(trash, n_trash, planets, n_planets, width, height);
+        update_physics(trash, n_trash, planets, n_planets, ship, MAX_SHIPS, width, height);
 
         // Check for collisions and generate new trash if collision detected
         if (check4collisions(trash, &n_trash, planets, n_planets))

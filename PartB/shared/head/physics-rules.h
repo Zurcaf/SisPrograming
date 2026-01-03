@@ -12,6 +12,7 @@
  */
 void update_physics(trash_t *trash, int total_trash,
                     planet_t *planets, int total_planets,
+                    ship_t *ships, int total_ships,
                     int universe_width, int universe_height);
 
 /**
@@ -30,6 +31,13 @@ void new_trash_velocity(trash_t *trash, int total_trash);
  */
 void new_trash_position(trash_t *trash, int total_trash,
                         int universe_width, int universe_height);
+
+// Ship physics (mass fixed to SHIP_MASS)
+void new_ship_acceleration(planet_t *planets, int total_planets,
+                           ship_t *ships, int total_ships);
+void new_ship_velocity(ship_t *ships, int total_ships);
+void new_ship_position(ship_t *ships, int total_ships,
+                       int universe_width, int universe_height);
 
 /**
  * Wrap position around universe edges

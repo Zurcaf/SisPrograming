@@ -5,11 +5,16 @@
  */
 void update_physics(trash_t *trash, int total_trash,
                     planet_t *planets, int total_planets,
+                    ship_t *ships, int total_ships,
                     int universe_width, int universe_height)
 {
     new_trash_acceleration(planets, total_planets, trash, total_trash);
     new_trash_velocity(trash, total_trash);
     new_trash_position(trash, total_trash, universe_width, universe_height);
+
+    new_ship_acceleration(planets, total_planets, ships, total_ships);
+    new_ship_velocity(ships, total_ships);
+    new_ship_position(ships, total_ships, universe_width, universe_height);
 }
 
 /**
@@ -130,6 +135,80 @@ vector_t add_vectors(vector_t v1, vector_t v2)
 
     // Convert back to polar
     return make_vector(x, y);
+}
+
+// Ship physics mirrors trash rules but always uses SHIP_MASS
+void new_ship_acceleration(planet_t *planets, int total_planets,
+                           ship_t *ships, int total_ships)
+{
+    vector_t total_vector_force;
+
+    for (int idx = 0; idx < total_ships; idx++)
+    {
+        // Skip ships not connected (load < 0)
+        if (ship_get_load_at(ships, idx) < 0)
+        {
+            vector_t zero = {0};
+            ship_set_acceleration_at(ships, idx, zero);
+            continue;
+        }
+
+        total_vector_force.amplitude = 0;
+        total_vector_force.angle = 0;
+
+        for (int n_planet = 0; n_planet < total_planets; n_planet++)
+        {
+            float force_vector_x = planet_get_x_at(planets, n_planet) - ship_get_x_at(ships, idx);
+            float force_vector_y = planet_get_y_at(planets, n_planet) - ship_get_y_at(ships, idx);
+            vector_t local_vector_force = make_vector(force_vector_x, force_vector_y);
+
+            float distance = local_vector_force.amplitude;
+            if (distance < 0.001f)
+                distance = 0.001f;
+
+            // Ship mass fixed at SHIP_MASS
+            local_vector_force.amplitude = (planet_get_mass_at(planets, n_planet) * SHIP_MASS) / (distance * distance);
+
+            total_vector_force = add_vectors(local_vector_force, total_vector_force);
+        }
+
+        ship_set_acceleration_at(ships, idx, total_vector_force);
+    }
+}
+
+void new_ship_velocity(ship_t *ships, int total_ships)
+{
+    for (int idx = 0; idx < total_ships; idx++)
+    {
+        if (ship_get_load_at(ships, idx) < 0)
+            continue;
+
+        vector_t vel = ship_get_velocity_at(ships, idx);
+        vel.amplitude *= 0.99f;
+        vel = add_vectors(vel, ship_get_acceleration_at(ships, idx));
+        ship_set_velocity_at(ships, idx, vel);
+    }
+}
+
+void new_ship_position(ship_t *ships, int total_ships,
+                       int universe_width, int universe_height)
+{
+    for (int idx = 0; idx < total_ships; idx++)
+    {
+        if (ship_get_load_at(ships, idx) < 0)
+            continue;
+
+        vector_t vel = ship_get_velocity_at(ships, idx);
+        float new_x = ship_get_x_at(ships, idx) + vel.amplitude * cos(vel.angle);
+        float new_y = ship_get_y_at(ships, idx) + vel.amplitude * sin(vel.angle);
+        ship_set_position_at(ships, idx, new_x, new_y);
+
+        float adj_x = ship_get_x_at(ships, idx);
+        float adj_y = ship_get_y_at(ships, idx);
+        correct_position(&adj_x, universe_width);
+        correct_position(&adj_y, universe_height);
+        ship_set_position_at(ships, idx, adj_x, adj_y);
+    }
 }
 
 /**

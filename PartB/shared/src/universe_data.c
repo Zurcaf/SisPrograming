@@ -18,6 +18,8 @@ struct trash
 struct ship
 {
     float x, y;
+    vector_t velocity;
+    vector_t acceleration;
     int capacity;
     int current_load;
 };
@@ -97,6 +99,10 @@ ship_t *init_ship(int capacity)
     {
         ship[i].x = 0;
         ship[i].y = 0;
+        ship[i].velocity.amplitude = 0;
+        ship[i].velocity.angle = 0;
+        ship[i].acceleration.amplitude = 0;
+        ship[i].acceleration.angle = 0;
         ship[i].capacity = capacity;
         ship[i].current_load = -1; // Initialize current load to -1 (indicating not connected)
     }
@@ -259,3 +265,7 @@ void ship_set_position_at(ship_t *list, int idx, float x, float y)
 void ship_set_load_at(ship_t *list, int idx, int load) { list[idx].current_load = load; }
 void ship_increment_load_at(ship_t *list, int idx) { list[idx].current_load++; }
 void ship_reset_load_at(ship_t *list, int idx) { list[idx].current_load = 0; }
+vector_t ship_get_velocity_at(const ship_t *list, int idx) { return list[idx].velocity; }
+vector_t ship_get_acceleration_at(const ship_t *list, int idx) { return list[idx].acceleration; }
+void ship_set_velocity_at(ship_t *list, int idx, vector_t v) { list[idx].velocity = v; }
+void ship_set_acceleration_at(ship_t *list, int idx, vector_t a) { list[idx].acceleration = a; }
