@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL.h>
@@ -11,36 +13,211 @@
 #include "../head/display.h"
 #include "../head/Communication.h"
 #include "../head/physics-rules.h"
+#include "../head/thread_pool.h"
 
-Uint32 timer_callback(Uint32 interval, void *param)
+/**
+ * Shared data structures between threads
+ * Protected by mutexes from thread_sync_t
+ */
+typedef struct
 {
-    SDL_Event timer_event;
+    planet_t *planets;
+    trash_t *trash;
+    ship_t *ships;
+    int n_trash;
+    int n_planets;
+    int max_n_trash;
+    int width;
+    int height;
+    void *zmq_fd;
+} universe_data_t;
 
-    (void)param; // explicitly marked as unused
+typedef struct
+{
+    thread_sync_t *sync;
+    universe_data_t *universe;
+    volatile bool running;
+    volatile bool game_over;
+} server_context_t;
 
-    SDL_zero(timer_event); /* SDL will copy this entire struct! Initialize to keep memory checkers happy. */
-    timer_event.type = SDL_USEREVENT;
-    timer_event.user.code = 2;
-    timer_event.user.data1 = NULL;
-    timer_event.user.data2 = NULL;
-    SDL_PushEvent(&timer_event);
-    return interval; // to continue the timer
+/**
+ * Physics thread: updates trash and ships every 10ms
+ * This thread does NOT access SDL
+ */
+void *physics_thread_func(void *arg)
+{
+    server_context_t *ctx = (server_context_t *)arg;
+    uint64_t last_physics_ms = get_time_ms();
+    const uint64_t physics_interval_ms = 10;
+
+    printf("[Physics] Thread started\n");
+
+    while (ctx->running)
+    {
+        uint64_t now_ms = get_time_ms();
+
+        if (now_ms - last_physics_ms >= physics_interval_ms)
+        {
+            // Lock universe data
+            lock_universe(ctx->sync);
+
+            // Update physics for trash and ships
+            update_physics(ctx->universe->trash, ctx->universe->n_trash,
+                           ctx->universe->planets, ctx->universe->n_planets,
+                           ctx->universe->ships, MAX_SHIPS,
+                           ctx->universe->width, ctx->universe->height);
+
+            unlock_universe(ctx->sync);
+
+            last_physics_ms = now_ms;
+        }
+
+        // Sleep briefly to avoid spinning (max ~100Hz)
+        usleep(1000); // 1ms
+    }
+
+    printf("[Physics] Thread exiting\n");
+    return NULL;
+}
+
+/**
+ * Communication thread: handles ZMQ messaging and periodic operations
+ * Receives commands from clients, manages trash spawning and planet rotation
+ */
+void *communication_thread_func(void *arg)
+{
+    server_context_t *ctx = (server_context_t *)arg;
+    uint64_t last_spawn_ms = get_time_ms();
+    uint64_t last_recycle_ms = get_time_ms();
+    const uint64_t trash_spawn_interval_ms = 10000;    // 10s
+    const uint64_t recycle_rotate_interval_ms = 30000; // 30s
+    char message_type[1024];
+    char ship_id;
+    char direction;
+    bool thrust_active = false;
+
+    printf("[Communication] Thread started\n");
+
+    while (ctx->running)
+    {
+        // Try to read message (ZMQ_DONTWAIT is non-blocking)
+        int result = read_message(ctx->universe->zmq_fd, message_type, &ship_id, &direction, &thrust_active);
+
+        if (result != -1)
+        {
+            int index = ship_index(ship_id);
+            lock_universe(ctx->sync);
+
+            if (strcmp("CONNECT", message_type) == 0 && ship_get_load_at(ctx->universe->ships, index) == -1)
+            {
+                if (index != -1)
+                {
+                    ship_set_load_at(ctx->universe->ships, index, 0);
+                    printf("[Comm] Ship %c connected\n", ship_id);
+                }
+            }
+            else if (strcmp("THRUST", message_type) == 0 && ship_get_load_at(ctx->universe->ships, index) != -1)
+            {
+                apply_thrust(ctx->universe->ships, index, direction, thrust_active);
+            }
+
+            unlock_universe(ctx->sync);
+            send_response(ctx->universe->zmq_fd, "OK");
+        }
+
+        // Check for ship presence
+        bool has_ship = false;
+        lock_universe(ctx->sync);
+        for (int si = 0; si < MAX_SHIPS; si++)
+        {
+            if (ship_get_load_at(ctx->universe->ships, si) >= 0)
+            {
+                has_ship = true;
+                break;
+            }
+        }
+        unlock_universe(ctx->sync);
+
+        // Periodic operations
+        uint64_t now_ms = get_time_ms();
+
+        // Collision-based trash generation
+        lock_universe(ctx->sync);
+        if (has_ship && check4collisions(ctx->universe->trash, &ctx->universe->n_trash,
+                                         ctx->universe->planets, ctx->universe->n_planets))
+        {
+            if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
+                         ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
+            {
+                printf("[Comm] Collision! New trash created. Total: %d\n", ctx->universe->n_trash);
+            }
+        }
+        unlock_universe(ctx->sync);
+
+        // Periodic trash spawn every 10s
+        if (has_ship && (now_ms - last_spawn_ms) >= trash_spawn_interval_ms)
+        {
+            lock_universe(ctx->sync);
+            if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
+                         ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
+            {
+                printf("[Comm] Periodic spawn. Total trash: %d\n", ctx->universe->n_trash);
+            }
+            unlock_universe(ctx->sync);
+            last_spawn_ms = now_ms;
+        }
+
+        // Rotate recycling planet every 30s
+        if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
+        {
+            lock_universe(ctx->sync);
+            int current = -1;
+            for (int pi = 0; pi < ctx->universe->n_planets; pi++)
+            {
+                if (planet_get_mass_at(ctx->universe->planets, pi) == 0)
+                {
+                    current = pi;
+                    break;
+                }
+            }
+            if (current >= 0)
+            {
+                int next = (current + 1) % ctx->universe->n_planets;
+                planet_set_mass_at(ctx->universe->planets, current, 10);
+                planet_set_mass_at(ctx->universe->planets, next, 0);
+                printf("[Comm] Recycling planet rotated to index %d\n", next);
+            }
+            unlock_universe(ctx->sync);
+            last_recycle_ms = now_ms;
+        }
+
+        // Check for game over (only set flag, don't exit - let main thread display message)
+        lock_game_state(ctx->sync);
+        if (ctx->universe->n_trash >= ctx->universe->max_n_trash && !ctx->game_over)
+        {
+            ctx->game_over = true;
+            printf("[Comm] GAME OVER - Max trash reached!\n");
+        }
+        unlock_game_state(ctx->sync);
+
+        usleep(10000); // 10ms sleep to avoid busy waiting
+    }
+
+    printf("[Communication] Thread exiting\n");
+    return NULL;
 }
 
 int main()
 {
-
-    // Try multiple config paths
+    // Load configuration
     const char *config_paths[] = {
-        "libconfig/init.conf",            // From PartB root
-        "../libconfig/init.conf",         // From Universe-server dir
-        "../../PartB/libconfig/init.conf" // From other locations
-    };
+        "libconfig/init.conf",
+        "../libconfig/init.conf",
+        "../../PartB/libconfig/init.conf"};
     int config_loaded = 0;
     for (int i = 0; i < 3; i++)
     {
         load_config(config_paths[i]);
-        // Verify config loaded by checking a value
         if (get_width_universe_int() > 0)
         {
             config_loaded = 1;
@@ -54,160 +231,102 @@ int main()
         return EXIT_FAILURE;
     }
 
-    int width = get_width_universe_int();
-    int height = get_height_universe_int();
-    int n_trash = get_init_n_trash_int();
-    int n_planets = get_n_planets_int();
-    int max_n_trash = get_max_n_trash_int();
-    int capacity_ship = get_capacity_ship_int();
-
-    void *fd = create_server_channel();
-
+    // Initialize SDL
     SDL_Window *win = NULL;
     SDL_Renderer *rend = NULL;
-    SDL_Color background_color = {0, 0, 0, 255}; // Black background
+    SDL_Color background_color = {0, 0, 0, 255};
 
-    if (init_display("Universe Simulator", width, height, &win, &rend, &background_color) != 0)
+    if (init_display("Universe Simulator", get_width_universe_int(), get_height_universe_int(),
+                     &win, &rend, &background_color) != 0)
     {
         return EXIT_FAILURE;
     }
 
-    planet_t *planets = init_planets(n_planets, width, height);
-    trash_t *trash = init_trash(n_trash, max_n_trash, width, height);
-    ship_t *ship = init_ship(capacity_ship);
+    // Initialize thread synchronization
+    thread_sync_t thread_sync;
+    if (thread_sync_init(&thread_sync) != 0)
+    {
+        fprintf(stderr, "Failed to initialize thread synchronization\n");
+        destroy_display(win, rend);
+        return EXIT_FAILURE;
+    }
 
-    Uint32 last_trash_spawn_ms = SDL_GetTicks();
-    Uint32 last_recycle_ms = SDL_GetTicks();
-    const Uint32 trash_spawn_interval_ms = 10000;    // 10s
-    const Uint32 recycle_rotate_interval_ms = 30000; // 30s
+    // Create universe data
+    universe_data_t universe = {
+        .planets = init_planets(get_n_planets_int(), get_width_universe_int(), get_height_universe_int()),
+        .trash = init_trash(get_init_n_trash_int(), get_max_n_trash_int(),
+                            get_width_universe_int(), get_height_universe_int()),
+        .ships = init_ship(get_capacity_ship_int()),
+        .n_trash = get_init_n_trash_int(),
+        .n_planets = get_n_planets_int(),
+        .max_n_trash = get_max_n_trash_int(),
+        .width = get_width_universe_int(),
+        .height = get_height_universe_int(),
+        .zmq_fd = create_server_channel()};
 
-    bool running = 1;
-    bool game_over = false;
-    char message_type[1024];
-    char ship_id;
-    char direction;
+    // Create server context
+    server_context_t ctx = {
+        .sync = &thread_sync,
+        .universe = &universe,
+        .running = true,
+        .game_over = false};
+
+    // Create worker threads
+    pthread_t physics_thread, comm_thread;
+    if (create_physics_thread(&physics_thread, physics_thread_func, &ctx) != 0)
+    {
+        fprintf(stderr, "Failed to create physics thread\n");
+        destroy_display(win, rend);
+        thread_sync_cleanup(&thread_sync);
+        return EXIT_FAILURE;
+    }
+
+    if (create_communication_thread(&comm_thread, communication_thread_func, &ctx) != 0)
+    {
+        fprintf(stderr, "Failed to create communication thread\n");
+        ctx.running = false;
+        pthread_join(physics_thread, NULL);
+        destroy_display(win, rend);
+        thread_sync_cleanup(&thread_sync);
+        return EXIT_FAILURE;
+    }
+
+    printf("[Main] Physics and Communication threads started\n");
+
+    // Main thread: SDL event handling and display (30 FPS = 33ms)
+    uint64_t last_display_ms = get_time_ms();
+    const uint64_t display_interval_ms = 33;
     SDL_Event event;
 
-    // Timer for 30 FPS (33ms per frame)
-    Uint32 frame_start = 0;
-    const Uint32 frame_delay = 33; // milliseconds (1000/30 ≈ 33ms)
+    printf("[Main] Starting main event loop\n");
 
-    SDL_AddTimer(33, (SDL_TimerCallback)timer_callback, NULL);
-
-    while (running)
+    while (ctx.running)
     {
-        frame_start = SDL_GetTicks();
-
-        // Process all pending events (non-blocking)
+        // Process SDL events
         while (SDL_PollEvent(&event))
         {
-            switch (event.type)
+            if (event.type == SDL_QUIT)
             {
-            case SDL_QUIT:
-                running = 0;
-                break;
-
-            case SDL_USEREVENT:
-                if (event.user.code == 2)
-                {
-                    if (read_message(fd, message_type, &ship_id, &direction) != -1)
-                    {
-                        int index = ship_index(ship_id);
-                        if (strcmp("CONNECT", message_type) == 0 && ship_get_load_at(ship, index) == -1)
-                        {
-                            if (index != -1)
-                            {
-                                ship_set_load_at(ship, index, 0);
-                            }
-                        }
-                        else
-                        {
-                            if (strcmp("MOVE", message_type) == 0 && ship_get_load_at(ship, index) != -1)
-                            {
-                                handle_data(ship, direction, trash, planets, width, height, n_trash, n_planets, index);
-                            }
-                        }
-                        send_response(fd, "OK");
-                    }
-                }
+                ctx.running = false;
                 break;
             }
         }
 
-        // Update physics every frame
-        update_physics(trash, n_trash, planets, n_planets, ship, MAX_SHIPS, width, height);
-
-        // Determine if there is any connected ship in the universe
-        bool has_ship = false;
-        for (int si = 0; si < MAX_SHIPS; si++)
+        // Check for game over (every iteration, not just on render)
+        lock_game_state(&thread_sync);
+        if (ctx.game_over)
         {
-            if (ship_get_load_at(ship, si) >= 0)
-            {
-                has_ship = true;
-                break;
-            }
-        }
+            unlock_game_state(&thread_sync);
 
-        // Collision-based trash only if there is at least one ship in the universe
-        if (has_ship && check4collisions(trash, &n_trash, planets, n_planets))
-        {
-            if (addTrash(trash, &n_trash, max_n_trash, width, height))
-            {
-                printf("Collision detected! New trash created. Total trash: %d\n", n_trash);
-            }
-            else
-            {
-                printf("Max trash capacity reached!\n");
-            }
-        }
+            // Display final frame
+            lock_universe(&thread_sync);
+            render_frame(rend, &background_color,
+                         universe.planets, universe.n_planets,
+                         universe.trash, universe.n_trash,
+                         universe.ships);
+            unlock_universe(&thread_sync);
 
-        Uint32 now_ms = SDL_GetTicks();
-
-        // Periodic trash spawn every 10s if ships exist
-        if (has_ship && (now_ms - last_trash_spawn_ms) >= trash_spawn_interval_ms)
-        {
-            if (addTrash(trash, &n_trash, max_n_trash, width, height))
-            {
-                printf("Periodic trash spawn. Total trash: %d\n", n_trash);
-            }
-            else
-            {
-                printf("Periodic spawn skipped: max trash reached.\n");
-            }
-            last_trash_spawn_ms = now_ms;
-        }
-
-        // Rotate recycling planet every 30s
-        if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
-        {
-            // Find current recycling planet
-            int current = -1;
-            for (int pi = 0; pi < n_planets; pi++)
-            {
-                if (planet_get_mass_at(planets, pi) == 0)
-                {
-                    current = pi;
-                    break;
-                }
-            }
-            if (current >= 0)
-            {
-                int next = (current + 1) % n_planets;
-                planet_set_mass_at(planets, current, 10);
-                planet_set_mass_at(planets, next, 0);
-                printf("Recycling planet rotated to index %d\n", next);
-            }
-            last_recycle_ms = now_ms;
-        }
-
-        // Render every frame
-        render_frame(rend, &background_color, planets, n_planets, trash, n_trash, ship);
-
-        // Check for game over condition after all spawns
-        if (n_trash >= max_n_trash && !game_over)
-        {
-            game_over = true;
-
+            // Show game over message
             SDL_MessageBoxColorScheme scheme = {
                 .colors = {
                     {255, 0, 0}, // background red
@@ -221,27 +340,50 @@ int main()
             msgbox.flags = SDL_MESSAGEBOX_ERROR;
             msgbox.window = win;
             msgbox.title = "Game Over";
-            msgbox.message = "The Universe is Full Off Trash! Humanity is Doomed!";
+            msgbox.message = "Game Over\nThe Universe is Full Off Trash! Humanity is Doomed!";
             msgbox.colorScheme = &scheme;
 
             SDL_ShowMessageBox(&msgbox, NULL);
-
-            // Gracefully stop the loop and close connections/rendering
-            running = 0;
+            ctx.running = false;
             break;
         }
+        unlock_game_state(&thread_sync);
 
-        // Frame rate limiting (maintain 30 FPS)
-        Uint32 frame_time = SDL_GetTicks() - frame_start;
-        if (frame_time < frame_delay)
+        // Display update at 30Hz
+        uint64_t now_ms = get_time_ms();
+        if (now_ms - last_display_ms >= display_interval_ms)
         {
-            SDL_Delay(frame_delay - frame_time);
+            lock_universe(&thread_sync);
+
+            render_frame(rend, &background_color,
+                         universe.planets, universe.n_planets,
+                         universe.trash, universe.n_trash,
+                         universe.ships);
+
+            unlock_universe(&thread_sync);
+
+            last_display_ms = now_ms;
         }
+
+        usleep(1000); // 1ms sleep to avoid busy waiting
     }
+
+    printf("[Main] Waiting for worker threads to finish\n");
+
+    // Wait for worker threads to complete
+    pthread_join(physics_thread, NULL);
+    pthread_join(comm_thread, NULL);
+
+    printf("[Main] All threads completed\n");
+
+    // Cleanup
     destroy_display(win, rend);
-    free(planets);
-    free(trash);
-    free(ship);
-    zmq_close(fd);
+    free(universe.planets);
+    free(universe.trash);
+    free(universe.ships);
+    zmq_close(universe.zmq_fd);
+    thread_sync_cleanup(&thread_sync);
+
+    printf("Server shutdown complete\n");
     return 0;
 }

@@ -15,6 +15,10 @@ void update_physics(trash_t *trash, int total_trash,
     new_ship_acceleration(planets, total_planets, ships, total_ships);
     new_ship_velocity(ships, total_ships);
     new_ship_position(ships, total_ships, universe_width, universe_height);
+
+    // Check collisions for trash collection and recycling
+    check_ship_trash_collisions(ships, total_ships, trash, total_trash);
+    check_ship_planet_collisions(ships, total_ships, planets, total_planets, trash, total_trash);
 }
 
 /**
@@ -171,6 +175,9 @@ void new_ship_acceleration(planet_t *planets, int total_planets,
 
             total_vector_force = add_vectors(local_vector_force, total_vector_force);
         }
+        // Add player thrust if any
+        vector_t thrust = ship_get_thrust_at(ships, idx);
+        total_vector_force = add_vectors(total_vector_force, thrust);
 
         ship_set_acceleration_at(ships, idx, total_vector_force);
     }
@@ -250,4 +257,101 @@ bool check4collisions(trash_t *trash, int *n_trash,
         }
     }
     return false;
+}
+
+/**
+ * Check ship-trash collisions and collect trash
+ * Ships collect trash when within radius if not at capacity
+ */
+void check_ship_trash_collisions(ship_t *ships, int total_ships,
+                                 trash_t *trash, int total_trash)
+{
+    const float COLLECT_RADIUS = 7.0f;
+
+    for (int si = 0; si < total_ships; si++)
+    {
+        // Skip disconnected ships
+        if (ship_get_load_at(ships, si) < 0)
+            continue;
+
+        // Skip if at capacity
+        if (ship_get_load_at(ships, si) >= ship_get_capacity_at(ships, si))
+            continue;
+
+        float ship_x = ship_get_x_at(ships, si);
+        float ship_y = ship_get_y_at(ships, si);
+
+        for (int ti = 0; ti < total_trash; ti++)
+        {
+            // Skip already collected trash
+            if (trash_get_mass_at(trash, ti) <= 0)
+                continue;
+
+            float dx = ship_x - trash_get_x_at(trash, ti);
+            float dy = ship_y - trash_get_y_at(trash, ti);
+            float distance = sqrt(dx * dx + dy * dy);
+
+            if (distance < COLLECT_RADIUS)
+            {
+                trash_set_mass_at(trash, ti, 0); // Collected (held by ship)
+                ship_increment_load_at(ships, si);
+            }
+        }
+    }
+}
+
+/**
+ * Check ship-planet collisions for recycling/dumping
+ * Recycling planet (mass=0) removes trash, others drop it back
+ */
+void check_ship_planet_collisions(ship_t *ships, int total_ships,
+                                  planet_t *planets, int total_planets,
+                                  trash_t *trash, int total_trash)
+{
+    const float PLANET_RADIUS = 14.0f;
+
+    for (int si = 0; si < total_ships; si++)
+    {
+        // Skip disconnected ships
+        if (ship_get_load_at(ships, si) < 0)
+            continue;
+
+        // Skip if no trash to drop
+        if (ship_get_load_at(ships, si) <= 0)
+            continue;
+
+        float ship_x = ship_get_x_at(ships, si);
+        float ship_y = ship_get_y_at(ships, si);
+
+        for (int pi = 0; pi < total_planets; pi++)
+        {
+            float dx = ship_x - planet_get_x_at(planets, pi);
+            float dy = ship_y - planet_get_y_at(planets, pi);
+            float distance = sqrt(dx * dx + dy * dy);
+
+            if (distance < PLANET_RADIUS)
+            {
+                bool is_recycling = (planet_get_mass_at(planets, pi) == 0);
+
+                // Process all collected trash
+                for (int ti = 0; ti < total_trash; ti++)
+                {
+                    if (trash_get_mass_at(trash, ti) == 0) // Collected trash
+                    {
+                        if (is_recycling)
+                        {
+                            trash_set_mass_at(trash, ti, -1); // Remove from universe
+                        }
+                        else
+                        {
+                            trash_set_mass_at(trash, ti, 1); // Drop back to universe
+                        }
+                    }
+                }
+
+                ship_reset_load_at(ships, si); // Empty the ship
+                break;                         // Only one planet collision per frame
+            }
+        }
+    }
 }

@@ -51,6 +51,19 @@ bool check4collisions(trash_t *trash, int *n_trash,
                       planet_t *planets, int n_planets);
 
 /**
+ * Check ship-trash collisions for collection
+ */
+void check_ship_trash_collisions(ship_t *ships, int total_ships,
+                                 trash_t *trash, int total_trash);
+
+/**
+ * Check ship-planet collisions for recycling/dumping
+ */
+void check_ship_planet_collisions(ship_t *ships, int total_ships,
+                                  planet_t *planets, int total_planets,
+                                  trash_t *trash, int total_trash);
+
+/**
  * Create vector from x,y components
  */
 vector_t make_vector(float x, float y);

@@ -22,9 +22,6 @@ planet_t *init_planets(int n, int width, int height);
 // Reuse freed trash slots (mass <= 0) before growing count. Updates n_trash when a new slot is used.
 bool addTrash(trash_t *trash, int *n_trash, int max, int width, int height);
 ship_t *init_ship(int capacity);
-void handle_data(ship_t *ship, char direction, trash_t *trash, planet_t *planets,
-                 int width, int height, int n_trash, int n_planets, int ship_index);
-bool contact_made(float src_x, float src_y, float dest_x, float dest_y, int radius);
 void correct_position(float *position, int edge_size);
 int ship_index(char id);
 
@@ -79,6 +76,11 @@ vector_t ship_get_velocity_at(const ship_t *list, int idx);
 vector_t ship_get_acceleration_at(const ship_t *list, int idx);
 void ship_set_velocity_at(ship_t *list, int idx, vector_t v);
 void ship_set_acceleration_at(ship_t *list, int idx, vector_t a);
+vector_t ship_get_thrust_at(const ship_t *list, int idx);
+void ship_set_thrust_at(ship_t *list, int idx, vector_t v);
+
+// Apply thrust direction (up/down/left/right) with a fixed magnitude; active=false clears thrust
+void apply_thrust(ship_t *ships, int idx, char direction, bool active);
 
 // Ship constants
 #define SHIP_MASS 1.0f

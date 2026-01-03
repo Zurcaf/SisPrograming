@@ -34,10 +34,12 @@ CFLAGS = -Wall -Wextra -std=c11 -g \
          $(EXTRA_INCLUDES) \
          $(shell sdl2-config --cflags) \
          $(shell pkg-config --cflags libconfig++ libprotobuf-c libzmq) \
+         -pthread \
          $(ASAN_FLAGS)
 
 LDFLAGS = $(shell sdl2-config --libs) \
           $(shell pkg-config --libs libconfig++ libprotobuf-c libzmq) -lm \
+          -pthread \
           $(ASAN_FLAGS)
 
 # Executable name

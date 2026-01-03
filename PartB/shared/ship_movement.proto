@@ -5,10 +5,11 @@ message Connect {
     required string client_id = 1;
 }
 
-// Message to move (replaces "MOVE %c %c")
-message Movement {
+// Message to control thrust (key down/up)
+message Thrust {
     required string client_id = 1;
     required string direction = 2;
+    required bool active = 3; // true on key down, false on key up
 }
 
 // Response from server (replaces simple string responses)

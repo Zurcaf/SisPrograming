@@ -20,6 +20,7 @@ struct ship
     float x, y;
     vector_t velocity;
     vector_t acceleration;
+    vector_t thrust; // persistent thrust from player input
     int capacity;
     int current_load;
 };
@@ -126,88 +127,104 @@ ship_t *init_ship(int capacity)
         ship[i].velocity.angle = 0;
         ship[i].acceleration.amplitude = 0;
         ship[i].acceleration.angle = 0;
+        ship[i].thrust.amplitude = 0;
+        ship[i].thrust.angle = 0;
         ship[i].capacity = capacity;
         ship[i].current_load = -1; // Initialize current load to -1 (indicating not connected)
     }
     return ship;
 }
 
-void handle_data(ship_t *ship, char direction, trash_t *trash, planet_t *planets,
-                 int width, int height, int n_trash, int n_planets, int ship_index)
+vector_t ship_get_thrust_at(const ship_t *list, int idx)
 {
-    const int SHIP_SPEED = 10; // Increased from 3 to 10 for faster movement
+    return list[idx].thrust;
+}
+
+void ship_set_thrust_at(ship_t *list, int idx, vector_t v)
+{
+    list[idx].thrust = v;
+}
+
+static vector_t thrust_vector_from_direction(char direction)
+{
+    const float THRUST_FORCE = 0.08f; // tuneable thrust magnitude
+    vector_t thrust = {0};
 
     switch (direction)
     {
     case 'u':
-        ship[ship_index].y -= SHIP_SPEED;
-        correct_position(&ship[ship_index].y, height);
-        break;
+        thrust.angle = -M_PI_2;
+        break; // up
     case 'd':
-        ship[ship_index].y += SHIP_SPEED;
-        correct_position(&ship[ship_index].y, height);
-        break;
-    case 'r':
-        ship[ship_index].x += SHIP_SPEED;
-        correct_position(&ship[ship_index].x, width);
-        break;
+        thrust.angle = M_PI_2;
+        break; // down
     case 'l':
-        ship[ship_index].x -= SHIP_SPEED;
-        correct_position(&ship[ship_index].x, width);
+        thrust.angle = M_PI;
+        break; // left
+    case 'r':
+        thrust.angle = 0.0f;
+        break; // right
+    default:
+        thrust.angle = 0.0f;
         break;
     }
-    if (ship[ship_index].current_load < ship[ship_index].capacity)
-    { // if ship collides with trash
-        for (int i = 0; i < n_trash; i++)
-        {
-            if (contact_made(ship[ship_index].x, ship[ship_index].y, trash[i].x, trash[i].y, 7) && trash[i].mass > 0)
-            {
-                trash[i].mass = 0; // Collect the trash
-                ship[ship_index].current_load++;
-            }
-        }
-    }
-
-    if (ship[ship_index].current_load > 0)
-    { // if ship collides with planet
-        for (int i = 0; i < n_planets; i++)
-        {
-            if (contact_made(ship[ship_index].x, ship[ship_index].y, planets[i].x, planets[i].y, 14))
-            {
-                ship[ship_index].current_load = 0;
-                if (planets[i].mass == 0)
-                { // recycling planet
-                    for (int j = 0; j < n_trash; j++)
-                    {
-                        if (trash[j].mass == 0)
-                        {
-                            trash[j].mass = -1; // remove trash from universe
-                        }
-                    }
-                }
-                else
-                {
-                    for (int j = 0; j < n_trash; j++)
-                    {
-                        if (trash[j].mass == 0)
-                        {
-                            trash[j].mass = 1; // drop trash back to universe
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return;
+    thrust.amplitude = THRUST_FORCE;
+    return thrust;
 }
 
-bool contact_made(float src_x, float src_y, float dest_x, float dest_y, int radius)
+// Convert vector from polar (amplitude, angle) to cartesian (x, y)
+static void vector_to_cartesian(const vector_t *polar, float *vx, float *vy)
 {
-    float distance_x = src_x - dest_x;
-    float distance_y = src_y - dest_y;
-    float distance = sqrt(distance_x * distance_x + distance_y * distance_y);
-    return distance < radius; // Assuming contact is made if distance is less than 1 unit
+    *vx = polar->amplitude * cosf(polar->angle);
+    *vy = polar->amplitude * sinf(polar->angle);
+}
+
+// Convert vector from cartesian (x, y) to polar (amplitude, angle)
+static void vector_from_cartesian(float vx, float vy, vector_t *polar)
+{
+    polar->amplitude = sqrtf(vx * vx + vy * vy);
+    polar->angle = atan2f(vy, vx);
+}
+
+void apply_thrust(ship_t *ships, int idx, char direction, bool active)
+{
+    if (idx < 0)
+    {
+        return;
+    }
+
+    // Get current thrust as cartesian coordinates
+    vector_t current = ship_get_thrust_at(ships, idx);
+    float current_vx, current_vy;
+    vector_to_cartesian(&current, &current_vx, &current_vy);
+
+    if (!active)
+    {
+        // Remove thrust for this direction
+        vector_t new_dir = thrust_vector_from_direction(direction);
+        float dir_vx, dir_vy;
+        vector_to_cartesian(&new_dir, &dir_vx, &dir_vy);
+
+        // Subtract this direction's thrust
+        current_vx -= dir_vx;
+        current_vy -= dir_vy;
+    }
+    else
+    {
+        // Add thrust for this direction
+        vector_t new_dir = thrust_vector_from_direction(direction);
+        float dir_vx, dir_vy;
+        vector_to_cartesian(&new_dir, &dir_vx, &dir_vy);
+
+        // Add this direction's thrust
+        current_vx += dir_vx;
+        current_vy += dir_vy;
+    }
+
+    // Convert back to polar and apply
+    vector_t result;
+    vector_from_cartesian(current_vx, current_vy, &result);
+    ship_set_thrust_at(ships, idx, result);
 }
 
 int ship_index(char id)

@@ -58,10 +58,7 @@ int main()
     int running = 1;
     SDL_Event event;
 
-    // Enable key repeat for continuous movement
-    const Uint8 *keystate;
-
-    // Timer for 30 FPS
+    // Timer for 30 FPS (render feedback on input)
     Uint32 frame_start = 0;
     const Uint32 frame_delay = 33; // milliseconds (1000/30 ≈ 33ms)
 
@@ -79,56 +76,76 @@ int main()
                 break;
 
             case SDL_KEYDOWN:
+                if (event.key.repeat)
+                {
+                    break; // ignore key repeats; only act on initial press
+                }
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_ESCAPE:
                     running = 0;
+                    break;
+                case SDLK_UP:
+                    send_thrust_message(fd, ch, 'u', true);
+                    receive_response(fd, message);
+                    if (strcmp(message, "OK") == 0)
+                    {
+                        render_client_frame(rend_c, &background_color_c, 'u');
+                    }
+                    break;
+                case SDLK_DOWN:
+                    send_thrust_message(fd, ch, 'd', true);
+                    receive_response(fd, message);
+                    if (strcmp(message, "OK") == 0)
+                    {
+                        render_client_frame(rend_c, &background_color_c, 'd');
+                    }
+                    break;
+                case SDLK_LEFT:
+                    send_thrust_message(fd, ch, 'l', true);
+                    receive_response(fd, message);
+                    if (strcmp(message, "OK") == 0)
+                    {
+                        render_client_frame(rend_c, &background_color_c, 'l');
+                    }
+                    break;
+                case SDLK_RIGHT:
+                    send_thrust_message(fd, ch, 'r', true);
+                    receive_response(fd, message);
+                    if (strcmp(message, "OK") == 0)
+                    {
+                        render_client_frame(rend_c, &background_color_c, 'r');
+                    }
+                    break;
+                }
+                break;
+
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_UP:
+                    send_thrust_message(fd, ch, 'u', false);
+                    receive_response(fd, message);
+                    break;
+                case SDLK_DOWN:
+                    send_thrust_message(fd, ch, 'd', false);
+                    receive_response(fd, message);
+                    break;
+                case SDLK_LEFT:
+                    send_thrust_message(fd, ch, 'l', false);
+                    receive_response(fd, message);
+                    break;
+                case SDLK_RIGHT:
+                    send_thrust_message(fd, ch, 'r', false);
+                    receive_response(fd, message);
                     break;
                 }
                 break;
             }
         }
 
-        // Get current keyboard state for continuous movement
-        keystate = SDL_GetKeyboardState(NULL);
-
-        // Send movement based on held keys (not just on keydown)
-        if (keystate[SDL_SCANCODE_UP])
-        {
-            send_movement_message(fd, ch, 'u');
-            receive_response(fd, message);
-            if (strcmp(message, "OK") == 0)
-            {
-                render_client_frame(rend_c, &background_color_c, 'u');
-            }
-        }
-        else if (keystate[SDL_SCANCODE_DOWN])
-        {
-            send_movement_message(fd, ch, 'd');
-            receive_response(fd, message);
-            if (strcmp(message, "OK") == 0)
-            {
-                render_client_frame(rend_c, &background_color_c, 'd');
-            }
-        }
-        else if (keystate[SDL_SCANCODE_LEFT])
-        {
-            send_movement_message(fd, ch, 'l');
-            receive_response(fd, message);
-            if (strcmp(message, "OK") == 0)
-            {
-                render_client_frame(rend_c, &background_color_c, 'l');
-            }
-        }
-        else if (keystate[SDL_SCANCODE_RIGHT])
-        {
-            send_movement_message(fd, ch, 'r');
-            receive_response(fd, message);
-            if (strcmp(message, "OK") == 0)
-            {
-                render_client_frame(rend_c, &background_color_c, 'r');
-            }
-        }
+        // Optional small render tick so the client window stays responsive
+        render_client_frame(rend_c, &background_color_c, ' ');
 
         // Frame rate limiting (maintain 30 FPS)
         Uint32 frame_time = SDL_GetTicks() - frame_start;

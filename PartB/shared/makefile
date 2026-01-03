@@ -51,7 +51,8 @@ SHARED_SOURCES = \
 	display.c \
 	universe_data.c \
 	physics-rules.c \
-	ship_movement.pb-c.c
+	ship_movement.pb-c.c \
+	thread_pool.c
 
 # Object files (all in obj directory)
 SHARED_OBJS = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SHARED_SOURCES))
