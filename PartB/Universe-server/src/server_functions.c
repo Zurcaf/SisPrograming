@@ -10,9 +10,6 @@ static void build_state_snapshot(const universe_data_t *universe, StateSnapshot 
 {
     state_snapshot__init(snapshot);
 
-    snapshot->width = universe->width;
-    snapshot->height = universe->height;
-
     // Planets
     snapshot->n_planets = universe->n_planets;
     if (snapshot->n_planets > 0)
@@ -441,7 +438,7 @@ void *communication_thread_func(void *arg)
 }
 
 // Centralized cleanup helper to avoid repeating frees/teardown
-static void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync)
+void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync)
 {
     if (rend || win)
     {

@@ -12,12 +12,8 @@ PartA/Trash-ship-simulator/trash-ship-simulator
 PartA/Universe-simulator/universe_simulator
 
 # PartB executables (centralizados em 0Executaveis)
-PartB/0Executaveis/*
-
-# init.conf
-PartA/libconfig/init.conf
-PartB/libconfig/init.conf
-
+PartB/0Executaveis/universe-server
+PartB/0Executaveis/trash-ship-client
 
 # Diretórios de build
 */obj/

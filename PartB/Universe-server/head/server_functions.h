@@ -53,7 +53,7 @@ typedef struct
 int read_message(void *fd, char *message_type, char *id, char *direction, bool *thrust_active);
 
 // Resource cleanup
-static void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync);
+void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync);
 
 // Worker thread entry points
 void *physics_thread_func(void *arg);

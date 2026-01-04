@@ -20,8 +20,8 @@ int main()
     // CONNECTION SETUP
     // =========================================================================
 
-    // Load shared configuration to match server dimensions
-    const char *config_path = "init.conf";
+    // Load client-side configuration (only width/height needed here)
+    const char *config_path = "client_init.conf";
     if (load_config(config_path) != 0)
     {
         fprintf(stderr, "Failed to load config at %s\n", config_path);

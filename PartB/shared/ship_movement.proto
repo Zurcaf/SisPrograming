@@ -59,9 +59,7 @@ message ShipState {
 }
 
 message StateSnapshot {
-    required int32 width = 1;
-    required int32 height = 2;
-    repeated PlanetState planets = 3;
-    repeated TrashState trash = 4;
-    repeated ShipState ships = 5;
+    repeated PlanetState planets = 1;
+    repeated TrashState trash = 2;
+    repeated ShipState ships = 3;
 }

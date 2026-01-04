@@ -7,7 +7,7 @@ int main()
     // INITIALIZATION PHASE
     // =========================================================================
 
-    const char *config_path = "init.conf";
+    const char *config_path = "server_init.conf";
 
     // Load configuration
     if (load_config(config_path) != 0)
