@@ -1,5 +1,18 @@
 #include "../head/server_functions.h"
 
+#include <signal.h>
+
+/* Global flag for graceful shutdown */
+static volatile sig_atomic_t shutdown_requested = 0;
+
+/* Signal handler for SIGINT and SIGTERM */
+static void signal_handler(int signum)
+{
+    (void)signum; /* unused */
+    shutdown_requested = 1;
+    printf("\n[Server] Shutdown signal received, cleaning up...\n");
+}
+
 int main()
 {
     // =========================================================================
@@ -14,6 +27,11 @@ int main()
         fprintf(stderr, "Failed to load config at %s\n", config_path);
         return EXIT_FAILURE;
     }
+
+    /* Register signal handlers for graceful shutdown */
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    printf("[Server] Signal handlers registered\n");
 
     // Display initialization
     SDL_Window *win = NULL;
@@ -136,6 +154,13 @@ int main()
                 ctx.running = false;
                 break;
             }
+        }
+
+        /* Check for external shutdown signal */
+        if (shutdown_requested)
+        {
+            ctx.running = false;
+            break;
         }
 
         // Check for game over (every iteration, not just on render)

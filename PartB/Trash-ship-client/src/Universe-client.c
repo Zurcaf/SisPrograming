@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <signal.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_timer.h>
@@ -13,6 +14,17 @@
 #include "../head/Communication.h"
 #include "../head/keyboard-processing.h"
 #include "../shared/head/validation.h"
+
+/* Global flag for graceful shutdown */
+static volatile sig_atomic_t shutdown_requested = 0;
+
+/* Signal handler for SIGINT and SIGTERM */
+static void signal_handler(int signum)
+{
+    (void)signum; /* unused */
+    shutdown_requested = 1;
+    printf("\n[Client] Shutdown signal received, disconnecting...\n");
+}
 
 int main()
 {
@@ -27,6 +39,11 @@ int main()
         fprintf(stderr, "Failed to load config at %s\n", config_path);
         return EXIT_FAILURE;
     }
+
+    /* Register signal handlers for graceful shutdown */
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    printf("[Client] Signal handlers registered\n");
 
     // Initialize connection with config values
     void *fd = create_client_channel(get_server_address_str(), get_server_port_int());
@@ -122,6 +139,13 @@ int main()
     while (running)
     {
         frame_start = SDL_GetTicks();
+
+        /* Check for external shutdown signal */
+        if (shutdown_requested)
+        {
+            running = 0;
+            break;
+        }
 
         // Process input events (delegated to keyboard-processing module)
         while (SDL_PollEvent(&event))
