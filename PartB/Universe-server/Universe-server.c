@@ -22,6 +22,7 @@ client_password_t client_passwords[MAX_CLIENTS];
 
 // Server-only message reader (moved from shared Communication.c)
 // Now uses Envelope wrapper to identify message type explicitly
+// Returns 0 on success, -1 on invalid input (but always sends a response)
 int read_message(void *fd, char *message_type, char *id, char *direction, bool *thrust_active)
 {
     zmq_msg_t zmq_msg;
@@ -56,6 +57,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
             printf("[Security] Invalid THRUST: id=%c, dir=%c, auth=%s\n",
                    client_id, direction_char,
                    is_valid_client_password(client_id, password) ? "ok" : "fail");
+            send_response(fd, "INVALID");
             envelope__free_unpacked(env, NULL);
             zmq_msg_close(&zmq_msg);
             return -1;
@@ -83,6 +85,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
         if (!is_valid_client_id(client_id) || !is_valid_password_format(password) || idx < 0)
         {
             printf("[Security] Invalid CONNECT inputs for client %c\n", client_id);
+            send_response(fd, "INVALID");
             envelope__free_unpacked(env, NULL);
             zmq_msg_close(&zmq_msg);
             return -1;
@@ -94,6 +97,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
             if (!set_client_password_if_empty(client_id, password))
             {
                 printf("[Security] Failed to set password for client %c\n", client_id);
+                send_response(fd, "INVALID");
                 envelope__free_unpacked(env, NULL);
                 zmq_msg_close(&zmq_msg);
                 return -1;
@@ -102,6 +106,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
         else if (!is_valid_client_password(client_id, password))
         {
             printf("[Security] Invalid CONNECT credentials for client %c\n", client_id);
+            send_response(fd, "INVALID");
             envelope__free_unpacked(env, NULL);
             zmq_msg_close(&zmq_msg);
             return -1;
@@ -120,6 +125,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
 
     envelope__free_unpacked(env, NULL);
     zmq_msg_close(&zmq_msg);
+    send_response(fd, "INVALID");
     return -1;
 }
 
@@ -372,27 +378,18 @@ void *communication_thread_func(void *arg)
 
 int main()
 {
-    // Load configuration
-    const char *config_paths[] = {
-        "libconfig/init.conf",
-        "../libconfig/init.conf",
-        "../../PartB/libconfig/init.conf"};
-    int config_loaded = 0;
-    for (int i = 0; i < 3; i++)
+
+    // Load configuration expected in the current working directory
+    const char *config_path = "init.conf";
+
+    load_config(config_path);
+    if (get_width_universe_int() <= 0)
     {
-        load_config(config_paths[i]);
-        if (get_width_universe_int() > 0)
-        {
-            config_loaded = 1;
-            printf("Config loaded from: %s\n", config_paths[i]);
-            break;
-        }
-    }
-    if (!config_loaded)
-    {
-        fprintf(stderr, "Failed to load config from any path\n");
+        fprintf(stderr, "Failed to load config at %s\n", config_path);
         return EXIT_FAILURE;
     }
+
+    printf("Config loaded from: %s\n", config_path);
 
     // Initialize SDL
     SDL_Window *win = NULL;
