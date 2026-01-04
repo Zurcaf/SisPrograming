@@ -5,6 +5,7 @@ struct planet
 {
     float x, y;
     float mass;
+    bool is_recycling;
 };
 
 struct trash
@@ -68,10 +69,11 @@ planet_t *init_planets(int n, int width, int height)
         planets[i].x = rand() % width;
         planets[i].y = rand() % height;
         planets[i].mass = 10; // 10 mass units
+        planets[i].is_recycling = false;
     }
 
     int random = rand() % n; // select random planet to be recycling planet
-    planets[random].mass = 0;
+    planets[random].is_recycling = true;
 
     return planets;
 }
@@ -274,6 +276,9 @@ float planet_get_x_at(const planet_t *list, int idx) { return list[idx].x; }
 float planet_get_y_at(const planet_t *list, int idx) { return list[idx].y; }
 float planet_get_mass_at(const planet_t *list, int idx) { return list[idx].mass; }
 void planet_set_mass_at(planet_t *list, int idx, float mass) { list[idx].mass = mass; }
+bool planet_is_recycling(const planet_t *p) { return p->is_recycling; }
+bool planet_is_recycling_at(const planet_t *list, int idx) { return list[idx].is_recycling; }
+void planet_set_recycling_at(planet_t *list, int idx, bool is_recycling) { list[idx].is_recycling = is_recycling; }
 
 // ----------------------
 // Trash accessors

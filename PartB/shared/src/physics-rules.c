@@ -319,12 +319,12 @@ void check_ship_trash_collisions(ship_t *ships, int total_ships,
 
 /**
  * Check ship-planet collisions for recycling/dumping
- * Recycling planet (mass=0) removes trash, others drop it back
+ * Recycling planet (flag) removes trash, others drop it back
  *
  * CRITICAL GAME LOGIC:
- * 1. Recycling planet (mass=0): Removes trash from universe (success!)
+ * 1. Recycling planet (flagged): Removes trash from universe (success!)
  *    - trash_mass = -1 means "destroyed/recycled"
- * 2. Normal planets (mass=10): Trash returns to universe (failure)
+ * 2. Normal planets: Trash returns to universe (failure)
  *    - trash_mass = 1 means "active in universe"
  * 3. Collected trash has mass=0 while on ship
  *
@@ -357,7 +357,7 @@ void check_ship_planet_collisions(ship_t *ships, int total_ships,
 
             if (distance < PLANET_RADIUS)
             {
-                bool is_recycling = (planet_get_mass_at(planets, pi) == 0);
+                bool is_recycling = planet_is_recycling_at(planets, pi);
 
                 // Process all collected trash
                 for (int ti = 0; ti < total_trash; ti++)

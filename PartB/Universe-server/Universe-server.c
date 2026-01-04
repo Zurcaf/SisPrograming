@@ -179,18 +179,18 @@ void *communication_thread_func(void *arg)
         }
 
         // Rotate recycling planet every 30s
-        // The recycling planet (mass=0) changes every 30 seconds
+        // The recycling planet marker changes every 30 seconds
         // This forces players to dynamically adapt their strategy
-        // 1. Find current recycling planet (the one with mass=0)
-        // 2. Restore current planet's mass to 10
-        // 3. Set next planet (circular) as new recycling planet (mass=0)
+        // 1. Find current recycling planet (flagged)
+        // 2. Clear current flag
+        // 3. Set next planet (circular) as new recycling planet (flagged)
         if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
         {
             lock_universe(ctx->sync);
             int current = -1;
             for (int pi = 0; pi < ctx->universe->n_planets; pi++)
             {
-                if (planet_get_mass_at(ctx->universe->planets, pi) == 0)
+                if (planet_is_recycling_at(ctx->universe->planets, pi))
                 {
                     current = pi;
                     break;
@@ -199,8 +199,8 @@ void *communication_thread_func(void *arg)
             if (current >= 0)
             {
                 int next = (current + 1) % ctx->universe->n_planets;
-                planet_set_mass_at(ctx->universe->planets, current, 10);
-                planet_set_mass_at(ctx->universe->planets, next, 0);
+                planet_set_recycling_at(ctx->universe->planets, current, false);
+                planet_set_recycling_at(ctx->universe->planets, next, true);
                 printf("[Comm] Recycling planet rotated to index %d\n", next);
             }
             unlock_universe(ctx->sync);

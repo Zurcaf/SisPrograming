@@ -16,3 +16,15 @@ message Thrust {
 message ServerResponse {
     required string message = 1;
 }
+
+// Wrapper to carry different message types on the same socket
+message Envelope {
+    enum Type {
+        CONNECT = 0;
+        THRUST = 1;
+    }
+
+    required Type type = 1;
+    optional Connect connect = 2;
+    optional Thrust thrust = 3;
+}

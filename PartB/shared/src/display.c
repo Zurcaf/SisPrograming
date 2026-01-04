@@ -67,7 +67,7 @@ void render_frame(SDL_Renderer *renderer, SDL_Color *background_color,
     // ---- desenhar planetas ----
     for (int i = 0; i < n_planets; i++)
     {
-        if (planet_get_mass_at(planets, i) == 0)
+        if (planet_is_recycling_at(planets, i))
         {
             SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // green for recycling planet
         }
