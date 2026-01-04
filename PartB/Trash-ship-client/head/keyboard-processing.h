@@ -2,6 +2,7 @@
 #define KEYBOARD_PROCESSING_H
 
 #include <SDL2/SDL.h>
+#include "ship_movement.pb-c.h"
 
 /**
  * Convert SDL key event to direction character
@@ -19,7 +20,7 @@ char get_direction_from_key(SDL_Keycode key);
  * Returns 0 on success, -1 on error
  */
 int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
-                           const char *password, char *response_buffer);
+                           const char *password, ServerResponse **out_response);
 
 /**
  * Check if key is a directional key

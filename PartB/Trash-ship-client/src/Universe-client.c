@@ -20,6 +20,14 @@ int main()
     // CONNECTION SETUP
     // =========================================================================
 
+    // Load shared configuration to match server dimensions
+    const char *config_path = "init.conf";
+    if (load_config(config_path) != 0)
+    {
+        fprintf(stderr, "Failed to load config at %s\n", config_path);
+        return EXIT_FAILURE;
+    }
+
     // Initialize connection
     void *fd = create_client_channel("localhost");
     if (fd == NULL)
@@ -51,7 +59,7 @@ int main()
 
         // Attempt connection
         send_connection_message(fd, client_id, password);
-        receive_response(fd, message);
+        receive_response_text(fd, message);
 
         if (strcmp(message, "OK") == 0)
         {
@@ -83,10 +91,13 @@ int main()
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
 
+    const int width = get_width_universe_int();
+    const int height = get_height_universe_int();
+
     char window_title[256];
     snprintf(window_title, sizeof(window_title), "Universe Client - %c", client_id);
 
-    if (init_display(window_title, 400, 400, &window, &renderer, &background_color) != 0)
+    if (init_display(window_title, width, height, &window, &renderer, &background_color) != 0)
     {
         fprintf(stderr, "Failed to initialize display\n");
         zmq_close(fd);
@@ -102,6 +113,9 @@ int main()
     SDL_Event event;
     Uint32 frame_start = 0;
     const Uint32 frame_delay = 33; // 30 FPS ≈ 33ms
+    Uint32 last_state_request = 0;
+
+    ServerResponse *latest_state = NULL; // cached snapshot to render
 
     printf("[Client] Starting game loop\n");
 
@@ -118,30 +132,84 @@ int main()
                 break;
             }
 
-            int key_result = process_keyboard_input(&event, fd, client_id, password, message);
+            ServerResponse *resp = NULL;
+            int key_result = process_keyboard_input(&event, fd, client_id, password, &resp);
 
             if (key_result < 0)
             {
-                // Either ESC pressed or error; exit the loop
+                if (resp)
+                {
+                    server_response__free_unpacked(resp, NULL);
+                }
                 running = 0;
                 break;
             }
 
-            // On successful thrust activation, render feedback only when the server accepted it
-            if (event.type == SDL_KEYDOWN && is_directional_key(event.key.keysym.sym) && strcmp(message, "OK") == 0)
+            if (resp)
             {
-                char direction = get_direction_from_key(event.key.keysym.sym);
-                render_client_frame(renderer, &background_color, direction);
+                if (resp->state)
+                {
+                    if (latest_state)
+                    {
+                        server_response__free_unpacked(latest_state, NULL);
+                    }
+                    latest_state = resp; // keep newest snapshot
+                }
+                else if (resp->message && strcmp(resp->message, "OK") == 0 && is_directional_key(event.key.keysym.sym))
+                {
+                    // Fallback feedback when server replies without state
+                    char direction = get_direction_from_key(event.key.keysym.sym);
+                    render_client_frame(renderer, &background_color, direction, width, height);
+                    server_response__free_unpacked(resp, NULL);
+                }
+                else
+                {
+                    server_response__free_unpacked(resp, NULL);
+                }
             }
         }
 
-        // Render frame
-        render_client_frame(renderer, &background_color, ' ');
+        // Periodic state sync to mirror server view (throttled to ~30Hz)
+        Uint32 now = SDL_GetTicks();
+        if (now - last_state_request >= frame_delay)
+        {
+            send_state_request(fd);
+            ServerResponse *state_resp = receive_response_full(fd);
+            last_state_request = now;
+
+            if (state_resp)
+            {
+                if (state_resp->state)
+                {
+                    if (latest_state)
+                    {
+                        server_response__free_unpacked(latest_state, NULL);
+                    }
+                    latest_state = state_resp;
+                }
+                else
+                {
+                    server_response__free_unpacked(state_resp, NULL);
+                }
+            }
+        }
+
+        // Render using latest snapshot (or fallback arrow)
+        if (latest_state && latest_state->state)
+        {
+            render_snapshot_frame(renderer, &background_color, latest_state->state);
+        }
+        else
+        {
+            render_client_frame(renderer, &background_color, ' ', width, height);
+        }
 
         // Maintain 30 FPS
         Uint32 frame_time = SDL_GetTicks() - frame_start;
         if (frame_time < frame_delay)
+        {
             SDL_Delay(frame_delay - frame_time);
+        }
     }
 
     // =========================================================================
@@ -151,6 +219,10 @@ int main()
     printf("[Client] Shutting down\n");
     destroy_display(window, renderer);
     zmq_close(fd);
+    if (latest_state)
+    {
+        server_response__free_unpacked(latest_state, NULL);
+    }
     memset(password, 0, MAX_PASSWORD_LEN);
 
     return EXIT_SUCCESS;

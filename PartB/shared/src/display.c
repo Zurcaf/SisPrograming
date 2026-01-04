@@ -120,7 +120,7 @@ void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius)
     }
 }
 
-void render_client_frame(SDL_Renderer *renderer, SDL_Color *background_color, char direction)
+void render_client_frame(SDL_Renderer *renderer, SDL_Color *background_color, char direction, int width, int height)
 {
     // force black background white
     SDL_SetRenderDrawColor(renderer, background_color->r, background_color->g, background_color->b, background_color->a);
@@ -129,9 +129,9 @@ void render_client_frame(SDL_Renderer *renderer, SDL_Color *background_color, ch
     // arrow black
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-    // window 400x400 -> center at (200,200)
-    const int cx = 200;
-    const int cy = 200;
+    // Center arrow based on window size
+    const int cx = width > 0 ? width / 2 : 200;
+    const int cy = height > 0 ? height / 2 : 200;
     const int size = 60; // overall arrow size
     const int half = size / 2;
     const int head = size / 3; // head size
@@ -179,6 +179,55 @@ void render_client_frame(SDL_Renderer *renderer, SDL_Color *background_color, ch
     default:
         // unknown direction: draw nothing (or you can draw a placeholder)
         break;
+    }
+
+    SDL_RenderPresent(renderer);
+}
+
+// Render full snapshot sent from server (client-side mirror)
+void render_snapshot_frame(SDL_Renderer *renderer, SDL_Color *background_color, const StateSnapshot *state)
+{
+    if (!renderer || !state)
+        return;
+
+    SDL_SetRenderDrawColor(renderer,
+                           background_color->r, background_color->g, background_color->b,
+                           background_color->a);
+    SDL_RenderClear(renderer);
+
+    // Planets
+    for (size_t i = 0; i < state->n_planets; i++)
+    {
+        PlanetState *p = state->planets[i];
+        if (!p)
+            continue;
+
+        if (p->is_recycling)
+            SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+        else
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+        draw_circle(renderer, (int)p->x, (int)p->y, 20);
+    }
+
+    // Trash
+    SDL_SetRenderDrawColor(renderer, 150, 0, 0, 255);
+    for (size_t i = 0; i < state->n_trash; i++)
+    {
+        TrashState *t = state->trash[i];
+        if (!t || t->mass <= 0)
+            continue;
+        draw_circle(renderer, (int)t->x, (int)t->y, 4);
+    }
+
+    // Ships
+    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    for (size_t i = 0; i < state->n_ships; i++)
+    {
+        ShipState *s = state->ships[i];
+        if (!s || !s->connected)
+            continue;
+        draw_circle(renderer, (int)s->x, (int)s->y, 14);
     }
 
     SDL_RenderPresent(renderer);

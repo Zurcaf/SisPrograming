@@ -17,6 +17,9 @@ message Thrust {
 // Response from server (replaces simple string responses)
 message ServerResponse {
     required string message = 1;
+
+    // Optional full state snapshot for client rendering
+    optional StateSnapshot state = 2;
 }
 
 // Wrapper to carry different message types on the same socket
@@ -24,9 +27,41 @@ message Envelope {
     enum Type {
         CONNECT = 0;
         THRUST = 1;
+        STATE_REQUEST = 2; // Client can ask explicitly for state (optional)
     }
 
     required Type type = 1;
     optional Connect connect = 2;
     optional Thrust thrust = 3;
+    // For STATE_REQUEST, no payload needed
+}
+
+// ---------- State sync for client display ----------
+message PlanetState {
+    required float x = 1;
+    required float y = 2;
+    required float mass = 3;
+    required bool is_recycling = 4;
+}
+
+message TrashState {
+    required float x = 1;
+    required float y = 2;
+    required float mass = 3;
+}
+
+message ShipState {
+    required float x = 1;
+    required float y = 2;
+    required int32 load = 3;
+    required int32 capacity = 4;
+    required bool connected = 5;
+}
+
+message StateSnapshot {
+    required int32 width = 1;
+    required int32 height = 2;
+    repeated PlanetState planets = 3;
+    repeated TrashState trash = 4;
+    repeated ShipState ships = 5;
 }

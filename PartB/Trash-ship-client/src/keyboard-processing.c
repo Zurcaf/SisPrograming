@@ -1,5 +1,7 @@
 #include "keyboard-processing.h"
 #include "../head/Communication.h"
+#include "../shared/head/validation.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -55,10 +57,15 @@ int is_quit_key(SDL_Keycode key)
  * Returns 0 on success, -1 on error
  */
 int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
-                           const char *password, char *response_buffer)
+                           const char *password, ServerResponse **out_response)
 {
+    if (out_response)
+    {
+        *out_response = NULL; // default when nothing is sent
+    }
+
     // Validate inputs
-    if (event == NULL || zmq_fd == NULL || password == NULL || response_buffer == NULL)
+    if (event == NULL || zmq_fd == NULL || password == NULL || out_response == NULL)
     {
         fprintf(stderr, "[Keyboard] Invalid input parameters\n");
         return -1;
@@ -99,8 +106,15 @@ int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
         // Send thrust message to server
         send_thrust_message(zmq_fd, client_id, direction, thrust_active, password);
 
-        // Receive server response
-        receive_response(zmq_fd, response_buffer);
+        // Receive server response (with potential state)
+        ServerResponse *resp = receive_response_full(zmq_fd);
+        if (resp == NULL)
+        {
+            fprintf(stderr, "[Keyboard] Failed to receive server response\n");
+            return -1;
+        }
+
+        *out_response = resp;
 
         // Log the input
         if (thrust_active)

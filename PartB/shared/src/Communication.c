@@ -15,10 +15,27 @@ void *create_server_channel()
     return responder;
 }
 
-void send_response(void *fd, char *message_text)
+void send_response(void *fd, const char *message_text)
 {
     ServerResponse resp = SERVER_RESPONSE__INIT;
-    resp.message = message_text;
+    resp.message = (char *)message_text;
+
+    size_t len = server_response__get_packed_size(&resp);
+    void *buf = malloc(len);
+    server_response__pack(&resp, buf);
+
+    zmq_send(fd, buf, len, 0);
+    free(buf);
+}
+
+void send_response_with_state(void *fd, const char *message_text, const StateSnapshot *state)
+{
+    ServerResponse resp = SERVER_RESPONSE__INIT;
+    resp.message = (char *)message_text;
+    if (state != NULL)
+    {
+        resp.state = (StateSnapshot *)state;
+    }
 
     size_t len = server_response__get_packed_size(&resp);
     void *buf = malloc(len);
@@ -88,22 +105,42 @@ void send_thrust_message(void *fd, char ch, char d, bool active, const char *pas
     free(buf);
 }
 
-void receive_response(void *fd, char *buffer)
+void send_state_request(void *fd)
+{
+    Envelope env = ENVELOPE__INIT;
+    env.type = ENVELOPE__TYPE__STATE_REQUEST;
+
+    size_t len = envelope__get_packed_size(&env);
+    void *buf = malloc(len);
+    envelope__pack(&env, buf);
+
+    zmq_send(fd, buf, len, 0);
+    free(buf);
+}
+
+void receive_response_text(void *fd, char *buffer)
+{
+    ServerResponse *resp = receive_response_full(fd);
+    if (resp)
+    {
+        strcpy(buffer, resp->message);
+        server_response__free_unpacked(resp, NULL);
+    }
+}
+
+ServerResponse *receive_response_full(void *fd)
 {
     zmq_msg_t zmq_msg;
     zmq_msg_init(&zmq_msg);
 
     int n = zmq_msg_recv(&zmq_msg, fd, 0);
     if (n == -1)
-        exit(1);
-
-    ServerResponse *resp = server_response__unpack(NULL, n, zmq_msg_data(&zmq_msg));
-
-    if (resp != NULL)
     {
-        strcpy(buffer, resp->message);
-        server_response__free_unpacked(resp, NULL);
+        zmq_msg_close(&zmq_msg);
+        return NULL;
     }
 
+    ServerResponse *resp = server_response__unpack(NULL, n, zmq_msg_data(&zmq_msg));
     zmq_msg_close(&zmq_msg);
+    return resp; // caller frees
 }

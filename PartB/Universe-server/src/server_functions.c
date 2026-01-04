@@ -5,6 +5,90 @@
 #include <string.h>
 #include <unistd.h>
 
+// Helpers to build and free a state snapshot for clients
+static void build_state_snapshot(const universe_data_t *universe, StateSnapshot *snapshot)
+{
+    state_snapshot__init(snapshot);
+
+    snapshot->width = universe->width;
+    snapshot->height = universe->height;
+
+    // Planets
+    snapshot->n_planets = universe->n_planets;
+    if (snapshot->n_planets > 0)
+    {
+        snapshot->planets = calloc(snapshot->n_planets, sizeof(PlanetState *));
+        for (size_t i = 0; i < snapshot->n_planets; i++)
+        {
+            snapshot->planets[i] = calloc(1, sizeof(PlanetState));
+            planet_state__init(snapshot->planets[i]);
+            snapshot->planets[i]->x = planet_get_x_at(universe->planets, (int)i);
+            snapshot->planets[i]->y = planet_get_y_at(universe->planets, (int)i);
+            snapshot->planets[i]->mass = planet_get_mass_at(universe->planets, (int)i);
+            snapshot->planets[i]->is_recycling = planet_is_recycling_at(universe->planets, (int)i);
+        }
+    }
+
+    // Trash
+    snapshot->n_trash = universe->n_trash;
+    if (snapshot->n_trash > 0)
+    {
+        snapshot->trash = calloc(snapshot->n_trash, sizeof(TrashState *));
+        for (size_t i = 0; i < snapshot->n_trash; i++)
+        {
+            snapshot->trash[i] = calloc(1, sizeof(TrashState));
+            trash_state__init(snapshot->trash[i]);
+            snapshot->trash[i]->x = trash_get_x_at(universe->trash, (int)i);
+            snapshot->trash[i]->y = trash_get_y_at(universe->trash, (int)i);
+            snapshot->trash[i]->mass = trash_get_mass_at(universe->trash, (int)i);
+        }
+    }
+
+    // Ships (fixed 52)
+    snapshot->n_ships = MAX_SHIPS;
+    snapshot->ships = calloc(snapshot->n_ships, sizeof(ShipState *));
+    for (size_t i = 0; i < snapshot->n_ships; i++)
+    {
+        snapshot->ships[i] = calloc(1, sizeof(ShipState));
+        ship_state__init(snapshot->ships[i]);
+        snapshot->ships[i]->x = ship_get_x_at(universe->ships, (int)i);
+        snapshot->ships[i]->y = ship_get_y_at(universe->ships, (int)i);
+        snapshot->ships[i]->load = ship_get_load_at(universe->ships, (int)i);
+        snapshot->ships[i]->capacity = ship_get_capacity_at(universe->ships, (int)i);
+        snapshot->ships[i]->connected = (ship_get_load_at(universe->ships, (int)i) >= 0);
+    }
+}
+
+static void free_state_snapshot(StateSnapshot *snapshot)
+{
+    if (snapshot->planets)
+    {
+        for (size_t i = 0; i < snapshot->n_planets; i++)
+        {
+            free(snapshot->planets[i]);
+        }
+        free(snapshot->planets);
+    }
+
+    if (snapshot->trash)
+    {
+        for (size_t i = 0; i < snapshot->n_trash; i++)
+        {
+            free(snapshot->trash[i]);
+        }
+        free(snapshot->trash);
+    }
+
+    if (snapshot->ships)
+    {
+        for (size_t i = 0; i < snapshot->n_ships; i++)
+        {
+            free(snapshot->ships[i]);
+        }
+        free(snapshot->ships);
+    }
+}
+
 // Provide global storage for client passwords (declared extern in validation.h)
 client_password_t client_passwords[MAX_CLIENTS];
 
@@ -111,6 +195,20 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
         return 0;
     }
 
+    if (env->type == ENVELOPE__TYPE__STATE_REQUEST)
+    {
+        strcpy(message_type, "STATE");
+        *id = ' ';
+        *direction = ' ';
+        if (thrust_active)
+        {
+            *thrust_active = false;
+        }
+        envelope__free_unpacked(env, NULL);
+        zmq_msg_close(&zmq_msg);
+        return 0;
+    }
+
     envelope__free_unpacked(env, NULL);
     zmq_msg_close(&zmq_msg);
     send_response(fd, "INVALID");
@@ -182,6 +280,19 @@ void *communication_thread_func(void *arg)
 
         if (result != -1)
         {
+            // Handle STATE snapshot requests immediately (no rate limit or ID required)
+            if (strcmp("STATE", message_type) == 0)
+            {
+                lock_universe(ctx->sync);
+                StateSnapshot snapshot;
+                build_state_snapshot(ctx->universe, &snapshot);
+                unlock_universe(ctx->sync);
+
+                send_response_with_state(ctx->universe->zmq_fd, "OK", &snapshot);
+                free_state_snapshot(&snapshot);
+                continue;
+            }
+
             int index = ship_index(ship_id);
 
             // Input validation
@@ -236,8 +347,14 @@ void *communication_thread_func(void *arg)
                 apply_thrust(ctx->universe->ships, index, direction, thrust_active);
             }
 
+            // Build snapshot under lock
+            StateSnapshot snapshot;
+            build_state_snapshot(ctx->universe, &snapshot);
+
             unlock_universe(ctx->sync);
-            send_response(ctx->universe->zmq_fd, "OK");
+
+            send_response_with_state(ctx->universe->zmq_fd, "OK", &snapshot);
+            free_state_snapshot(&snapshot);
         }
 
         // Check for ship presence
