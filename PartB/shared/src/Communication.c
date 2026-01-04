@@ -34,6 +34,10 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
     size_t msg_len = zmq_msg_size(&zmq_msg);
 
     // ATTEMPT 1: Try unpacking as Thrust (keydown/keyup)
+    // Attempt to deserialize as Thrust message (ship movement)
+    // Protocol Buffers allows different message types to be sent
+    // on the same socket, but doesn't include type identifier automatically.
+    // So we try to deserialize as each possible type until we succeed.
     Thrust *thrust_msg = thrust__unpack(NULL, msg_len, msg_data);
 
     if (thrust_msg != NULL)
@@ -51,6 +55,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
     }
 
     // ATTEMPT 2: Try unpacking as Connect
+    // If not Thrust, try as new client connection message
     Connect *con_msg = connect__unpack(NULL, msg_len, msg_data);
 
     if (con_msg != NULL)

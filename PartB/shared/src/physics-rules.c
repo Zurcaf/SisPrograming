@@ -45,21 +45,29 @@ void new_trash_acceleration(planet_t *planets, int total_planets,
         total_vector_force.angle = 0;
 
         // Calculate gravitational force from each planet
+        // Implements simplified Newton's Law of Universal Gravitation:
+        // F = (M * m) / r²
+        // where M is planet mass, m is trash mass, and r is distance
         for (int n_planet = 0; n_planet < total_planets; n_planet++)
         {
+            // Calculate force direction vector (from trash to planet)
             float force_vector_x = planet_get_x_at(planets, n_planet) - trash_get_x_at(trash, n_trash);
             float force_vector_y = planet_get_y_at(planets, n_planet) - trash_get_y_at(trash, n_trash);
             vector_t local_vector_force = make_vector(force_vector_x, force_vector_y);
 
             // Apply inverse square law
+            // Use minimum distance of 0.001 to avoid division by zero
+            // when objects are very close together
             float distance = local_vector_force.amplitude;
             if (distance < 0.001)
                 distance = 0.001;
 
-            // F = (M * m) / r^2
+            // F = (M * m) / r²
+            // Force decreases with the square of distance
             local_vector_force.amplitude = (planet_get_mass_at(planets, n_planet) * trash_get_mass_at(trash, n_trash)) / (distance * distance);
 
             // Sum all forces
+            // Vector sum of all gravitational forces from planets
             total_vector_force = add_vectors(local_vector_force, total_vector_force);
         }
 
@@ -130,6 +138,15 @@ vector_t make_vector(float x, float y)
 
 /**
  * Add two vectors in polar form by converting to Cartesian, adding, then back to polar
+ *
+ * Vectors are stored in polar coordinates (amplitude, angle) because:
+ * 1. It's more intuitive for physics (direction and magnitude)
+ * 2. Makes applying directional forces easier
+ *
+ * But vector addition is simpler in Cartesian coordinates:
+ * 1. Convert both vectors to (x,y) using cos/sin
+ * 2. Add x and y components separately
+ * 3. Convert result back to polar using atan2 and sqrt
  */
 vector_t add_vectors(vector_t v1, vector_t v2)
 {
@@ -303,6 +320,15 @@ void check_ship_trash_collisions(ship_t *ships, int total_ships,
 /**
  * Check ship-planet collisions for recycling/dumping
  * Recycling planet (mass=0) removes trash, others drop it back
+ *
+ * CRITICAL GAME LOGIC:
+ * 1. Recycling planet (mass=0): Removes trash from universe (success!)
+ *    - trash_mass = -1 means "destroyed/recycled"
+ * 2. Normal planets (mass=10): Trash returns to universe (failure)
+ *    - trash_mass = 1 means "active in universe"
+ * 3. Collected trash has mass=0 while on ship
+ *
+ * This mechanic forces strategy: players must go to the correct planet
  */
 void check_ship_planet_collisions(ship_t *ships, int total_ships,
                                   planet_t *planets, int total_planets,

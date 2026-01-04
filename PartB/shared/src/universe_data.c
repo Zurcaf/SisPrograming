@@ -186,6 +186,22 @@ static void vector_from_cartesian(float vx, float vy, vector_t *polar)
     polar->angle = atan2f(vy, vx);
 }
 
+/**
+ * Apply or remove directional thrust from a ship
+ *
+ * MULTI-DIRECTIONAL CONTROL SYSTEM:
+ * Allows multiple keys to be pressed simultaneously
+ * (e.g., UP+RIGHT for diagonal movement)
+ *
+ * HOW IT WORKS:
+ * 1. Convert ship's current thrust to Cartesian coordinates (vx, vy)
+ * 2. If active=true: ADD thrust vector for pressed direction
+ * 3. If active=false: SUBTRACT thrust vector for released direction
+ * 4. Convert result back to polar coordinates
+ *
+ * This allows continuous thrust while key is held,
+ * and smooth removal when key is released (SDL_KEYUP)
+ */
 void apply_thrust(ship_t *ships, int idx, char direction, bool active)
 {
     if (idx < 0)
@@ -227,6 +243,17 @@ void apply_thrust(ship_t *ships, int idx, char direction, bool active)
     ship_set_thrust_at(ships, idx, result);
 }
 
+/**
+ * Convert a character (client ID) to index in ships array
+ *
+ * IDENTIFICATION SYSTEM:
+ * - Supports 52 simultaneous players (A-Z = 26, a-z = 26)
+ * - 'A' -> index 0, 'B' -> index 1, ..., 'Z' -> index 25
+ * - 'a' -> index 26, 'b' -> index 27, ..., 'z' -> index 51
+ *
+ * Returns -1 for invalid characters
+ * This direct mapping is efficient and avoids complex lookup structures
+ */
 int ship_index(char id)
 {
     if (id >= 'A' && id <= 'Z')

@@ -19,11 +19,15 @@ int main()
     char ch = '\0';
     char message[100];
 
+    // Initial connection loop
+    // Allows client to choose a unique ID (character)
+    // If ID is already in use, server responds "NOT OK" and client tries again
     while (1)
     {
         while (!isalpha(ch))
         {
-            printf("what is your character(a..z)?: ");
+            printf("what is your character(a..z; A..Z)?: ");
+            printf("(Note: Character must be unique among connected players)\n");
             ch = getchar();
             ch = tolower(ch);
         }
@@ -31,11 +35,12 @@ int main()
         receive_response(fd, message);
         if (strcmp(message, "NOT OK") == 0)
         {
-            continue;
+            printf("Character '%c' is already in use. Please choose another.\n", ch);
+            continue; // ID already in use, ask for another
         }
         else
         {
-            break;
+            break; // Connection successful
         }
     }
     printf("Connected successfully as '%c'\n", ch);
@@ -76,6 +81,8 @@ int main()
                 break;
 
             case SDL_KEYDOWN:
+                // Ignore key repeats (when key is held down)
+                // We only want to react to initial press, not OS automatic repeats
                 if (event.key.repeat)
                 {
                     break; // ignore key repeats; only act on initial press
@@ -86,10 +93,13 @@ int main()
                     running = 0;
                     break;
                 case SDLK_UP:
+                    // Send thrust message to server via ZeroMQ
+                    // Request-reply pattern: send and wait for confirmation
                     send_thrust_message(fd, ch, 'u', true);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
                     {
+                        // Local visual feedback (doesn't need server data)
                         render_client_frame(rend_c, &background_color_c, 'u');
                     }
                     break;

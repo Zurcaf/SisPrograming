@@ -18,6 +18,15 @@
 /**
  * Shared data structures between threads
  * Protected by mutexes from thread_sync_t
+ *
+ * This structure contains all data shared between threads:
+ * - planets, trash, ships: arrays of universe objects
+ * - n_trash, n_planets, max_n_trash: counters and limits
+ * - width, height: universe dimensions
+ * - zmq_fd: ZeroMQ socket for client-server communication
+ *
+ * IMPORTANT: Any access to this data must be protected by mutexes
+ * to avoid race conditions between physics and communication threads
  */
 typedef struct
 {
@@ -142,6 +151,8 @@ void *communication_thread_func(void *arg)
         uint64_t now_ms = get_time_ms();
 
         // Collision-based trash generation
+        // When trash collides with planets, it generates more trash (cascade effect)
+        // This increases game difficulty over time
         lock_universe(ctx->sync);
         if (has_ship && check4collisions(ctx->universe->trash, &ctx->universe->n_trash,
                                          ctx->universe->planets, ctx->universe->n_planets))
@@ -168,6 +179,11 @@ void *communication_thread_func(void *arg)
         }
 
         // Rotate recycling planet every 30s
+        // The recycling planet (mass=0) changes every 30 seconds
+        // This forces players to dynamically adapt their strategy
+        // 1. Find current recycling planet (the one with mass=0)
+        // 2. Restore current planet's mass to 10
+        // 3. Set next planet (circular) as new recycling planet (mass=0)
         if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
         {
             lock_universe(ctx->sync);
