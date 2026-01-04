@@ -48,12 +48,13 @@ SERVER_BIN = $(BIN_DIR)/universe-server
 
 # Object files
 SERVER_OBJ = $(OBJ_DIR)/Universe-server.o
+SERVER_FUNCS_OBJ = $(OBJ_DIR)/server_functions.o
 PHYSICS_OBJ = $(OBJ_DIR)/physics-rules.o
 SHARED_LIB = $(SHARED_DIR)/obj/libshared.a
 LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 
 # All dependencies
-ALL_OBJS = $(SERVER_OBJ) $(PHYSICS_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
+ALL_OBJS = $(SERVER_OBJ) $(SERVER_FUNCS_OBJ) $(PHYSICS_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
 
 # Default target
 all: $(OBJ_DIR) $(BIN_DIR) $(SERVER_BIN)
@@ -65,6 +66,10 @@ $(SERVER_BIN): $(ALL_OBJS)
 
 # Compile main source
 $(OBJ_DIR)/Universe-server.o: src/Universe-server.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile server functions source
+$(OBJ_DIR)/server_functions.o: src/server_functions.c head/server_functions.h | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile physics source

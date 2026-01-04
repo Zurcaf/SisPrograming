@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 
-#include <universe_data.h>
+#include "../../shared/head/universe_data.h"
 
 /**
  * Update all physics for trash objects
@@ -38,11 +38,6 @@ void new_ship_acceleration(planet_t *planets, int total_planets,
 void new_ship_velocity(ship_t *ships, int total_ships);
 void new_ship_position(ship_t *ships, int total_ships,
                        int universe_width, int universe_height);
-
-/**
- * Wrap position around universe edges
- */
-void correct_position(float *position, int edge_size);
 
 /**
  * Check for collisions between trash and planets

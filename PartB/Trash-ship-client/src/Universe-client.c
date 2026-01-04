@@ -11,6 +11,7 @@
 #include "../head/universe_data.h"
 #include "../head/display.h"
 #include "../head/Communication.h"
+#include "../head/keyboard-processing.h"
 #include "../shared/head/validation.h"
 
 int main()
@@ -108,61 +109,29 @@ int main()
     {
         frame_start = SDL_GetTicks();
 
-        // Process input events
+        // Process input events (delegated to keyboard-processing module)
         while (SDL_PollEvent(&event))
         {
-            switch (event.type)
+            if (event.type == SDL_QUIT)
             {
-            case SDL_QUIT:
                 running = 0;
                 break;
+            }
 
-            case SDL_KEYDOWN:
-                // Ignore key repeats (OS automatic repeats)
-                if (event.key.repeat)
-                    break;
+            int key_result = process_keyboard_input(&event, fd, client_id, password, message);
 
-                switch (event.key.keysym.sym)
-                {
-                case SDLK_ESCAPE:
-                    running = 0;
-                    break;
-
-                // Directional inputs: send thrust and render feedback
-                case SDLK_UP:
-                case SDLK_DOWN:
-                case SDLK_LEFT:
-                case SDLK_RIGHT:
-                {
-                    char direction = (event.key.keysym.sym == SDLK_UP) ? 'u' : (event.key.keysym.sym == SDLK_DOWN) ? 'd'
-                                                                           : (event.key.keysym.sym == SDLK_LEFT)   ? 'l'
-                                                                                                                   : 'r';
-                    send_thrust_message(fd, client_id, direction, true, password);
-                    receive_response(fd, message);
-                    if (strcmp(message, "OK") == 0)
-                        render_client_frame(renderer, &background_color, direction);
-                    break;
-                }
-                }
+            if (key_result < 0)
+            {
+                // Either ESC pressed or error; exit the loop
+                running = 0;
                 break;
+            }
 
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym)
-                {
-                case SDLK_UP:
-                case SDLK_DOWN:
-                case SDLK_LEFT:
-                case SDLK_RIGHT:
-                {
-                    char direction = (event.key.keysym.sym == SDLK_UP) ? 'u' : (event.key.keysym.sym == SDLK_DOWN) ? 'd'
-                                                                           : (event.key.keysym.sym == SDLK_LEFT)   ? 'l'
-                                                                                                                   : 'r';
-                    send_thrust_message(fd, client_id, direction, false, password);
-                    receive_response(fd, message);
-                    break;
-                }
-                }
-                break;
+            // On successful thrust activation, render feedback only when the server accepted it
+            if (event.type == SDL_KEYDOWN && is_directional_key(event.key.keysym.sym) && strcmp(message, "OK") == 0)
+            {
+                char direction = get_direction_from_key(event.key.keysym.sym);
+                render_client_frame(renderer, &background_color, direction);
             }
         }
 
