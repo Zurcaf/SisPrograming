@@ -22,6 +22,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
 // Server responses (with optional full state snapshot)
 void send_response(void *fd, const char *message_text);
 void send_response_with_state(void *fd, const char *message_text, const StateSnapshot *state);
+void send_disconnect_message(void *fd, char ch, const char *password);
 
 // Client receive helpers
 // receive_response_text fills message buffer with response->message and discards state

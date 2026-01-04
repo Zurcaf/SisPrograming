@@ -241,6 +241,13 @@ int main()
     // =========================================================================
 
     printf("[Client] Shutting down\n");
+
+    // Send a clean disconnect to server
+    if (fd && isalpha(client_id))
+    {
+        send_disconnect_message(fd, client_id, password);
+    }
+
     destroy_display(window, renderer);
     zmq_close(fd);
     if (latest_state)

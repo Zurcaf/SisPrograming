@@ -89,6 +89,23 @@ static void free_state_snapshot(StateSnapshot *snapshot)
 // Provide global storage for client passwords (declared extern in validation.h)
 client_password_t client_passwords[MAX_CLIENTS];
 
+// Helper: disconnect ship and clear auth
+static void disconnect_ship(server_context_t *ctx, int index, char ship_id)
+{
+    vector_t zero = {0};
+
+    ship_set_load_at(ctx->universe->ships, index, -1);
+    ship_set_velocity_at(ctx->universe->ships, index, zero);
+    ship_set_acceleration_at(ctx->universe->ships, index, zero);
+    ship_set_thrust_at(ctx->universe->ships, index, zero);
+
+    mark_client_disconnected(ship_id);
+    ctx->last_message_time[index] = 0;
+    ctx->message_count[index] = 0;
+
+    printf("[Comm] Ship %c disconnected\n", ship_id);
+}
+
 // Server-only message reader (moved from shared Communication.c)
 // Now uses Envelope wrapper to identify message type explicitly
 // Returns 0 on success, -1 on invalid input (but always sends a response)
@@ -110,6 +127,32 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
     {
         zmq_msg_close(&zmq_msg);
         return -1;
+    }
+
+    if (env->type == ENVELOPE__TYPE__DISCONNECT && env->disconnect != NULL)
+    {
+        char client_id = env->disconnect->client_id[0];
+        const char *password = env->disconnect->password;
+
+        if (!is_valid_client_id(client_id) || !is_valid_client_password(client_id, password))
+        {
+            printf("[Security] Invalid DISCONNECT for client %c\n", client_id);
+            send_response(fd, "INVALID");
+            envelope__free_unpacked(env, NULL);
+            zmq_msg_close(&zmq_msg);
+            return -1;
+        }
+
+        strcpy(message_type, "DISCONNECT");
+        *id = client_id;
+        *direction = ' ';
+        if (thrust_active)
+        {
+            *thrust_active = false;
+        }
+        envelope__free_unpacked(env, NULL);
+        zmq_msg_close(&zmq_msg);
+        return 0;
     }
 
     if (env->type == ENVELOPE__TYPE__THRUST && env->thrust != NULL)
@@ -290,6 +333,19 @@ void *communication_thread_func(void *arg)
                 continue;
             }
 
+            if (strcmp("DISCONNECT", message_type) == 0)
+            {
+                int index = ship_index(ship_id);
+                if (index >= 0)
+                {
+                    lock_universe(ctx->sync);
+                    disconnect_ship(ctx, index, ship_id);
+                    unlock_universe(ctx->sync);
+                }
+                send_response(ctx->universe->zmq_fd, "BYE");
+                continue;
+            }
+
             int index = ship_index(ship_id);
 
             // Input validation
@@ -310,7 +366,6 @@ void *communication_thread_func(void *arg)
                 {
                     printf("[Security] Rate limit exceeded for ship %c\n", ship_id);
                     send_response(ctx->universe->zmq_fd, "RATELIMIT");
-                    continue;
                 }
             }
             else
@@ -387,6 +442,20 @@ void *communication_thread_func(void *arg)
         // Periodic trash spawn every 10s
         if (has_ship && (now_periodic - last_spawn_ms) >= trash_spawn_interval_ms)
         {
+                /* Drop inactive ships that stopped sending messages */
+                const uint64_t idle_timeout_ms = 5000; // 5s inactivity
+                lock_universe(ctx->sync);
+                for (int si = 0; si < MAX_SHIPS; si++)
+                {
+                    if (ship_get_load_at(ctx->universe->ships, si) >= 0)
+                    {
+                        if (ctx->last_message_time[si] > 0 && (now_periodic - ctx->last_message_time[si]) > idle_timeout_ms)
+                        {
+                            disconnect_ship(ctx, si, client_index_to_id(si));
+                        }
+                    }
+                }
+                unlock_universe(ctx->sync);
             lock_universe(ctx->sync);
             if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
                          ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))

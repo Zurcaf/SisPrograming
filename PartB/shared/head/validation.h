@@ -73,6 +73,15 @@ static inline int get_client_index(char client_id)
     return -1;
 }
 
+static inline char client_index_to_id(int idx)
+{
+    if (idx >= 0 && idx < 26)
+        return 'A' + idx;
+    if (idx >= 26 && idx < MAX_CLIENTS)
+        return 'a' + (idx - 26);
+    return '?';
+}
+
 /**
  * Validate client ID (single character: a-z or A-Z)
  */
@@ -140,6 +149,16 @@ static inline void mark_client_authenticated(char client_id)
     int idx = get_client_index(client_id);
     if (idx >= 0 && idx < MAX_CLIENTS)
         client_passwords[idx].authenticated = true;
+}
+
+/**
+ * Mark client as disconnected (keep password, drop authentication)
+ */
+static inline void mark_client_disconnected(char client_id)
+{
+    int idx = get_client_index(client_id);
+    if (idx >= 0 && idx < MAX_CLIENTS)
+        client_passwords[idx].authenticated = false;
 }
 
 /**

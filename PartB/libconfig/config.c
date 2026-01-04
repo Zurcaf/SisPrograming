@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* configuration parameters with default values */
-static int width_universe_int; /* sensible defaults */
-static int height_universe_int;
-static int max_n_trash_int;
-static int init_n_trash_int;
-static int capacity_ship_int;
-static int n_planets_int;
+/* configuration parameters with default values (safe fallbacks for client side) */
+static int width_universe_int = 800;
+static int height_universe_int = 800;
+static int max_n_trash_int = 1;
+static int init_n_trash_int = 0;
+static int capacity_ship_int = 1;
+static int n_planets_int = 1;
 
 /* socket configuration */
 static int server_port_int = 45007;                /* default port */

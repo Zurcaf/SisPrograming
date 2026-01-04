@@ -14,6 +14,12 @@ message Thrust {
     required bool active = 4; // true on key down, false on key up
 }
 
+// Message to disconnect cleanly
+message Disconnect {
+    required string client_id = 1;
+    required string password = 2; // authenticate disconnect
+}
+
 // Response from server (replaces simple string responses)
 message ServerResponse {
     required string message = 1;
@@ -28,11 +34,13 @@ message Envelope {
         CONNECT = 0;
         THRUST = 1;
         STATE_REQUEST = 2; // Client can ask explicitly for state (optional)
+        DISCONNECT = 3;     // Client voluntarily disconnects
     }
 
     required Type type = 1;
     optional Connect connect = 2;
     optional Thrust thrust = 3;
+    optional Disconnect disconnect = 4;
     // For STATE_REQUEST, no payload needed
 }
 
