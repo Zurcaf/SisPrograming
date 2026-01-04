@@ -1,4 +1,5 @@
 #include "../head/universe_data.h"
+
 planet_t* init_planets(int n, int width, int height) {
     planet_t* planets = malloc(n * sizeof(planet_t));
     if (planets == NULL) {

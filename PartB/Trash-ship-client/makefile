@@ -29,6 +29,7 @@ BIN_DIR = ../0Executaveis
 
 # Compiler flags (includes shared and libconfig headers)
 CFLAGS = -Wall -Wextra -std=c11 -g \
+         -Ihead \
          -I$(SHARED_DIR)/head \
          -I$(LIBCONFIG_DIR) \
          $(EXTRA_INCLUDES) \
@@ -45,11 +46,12 @@ CLIENT_BIN = $(BIN_DIR)/trash-ship-client
 
 # Object files
 CLIENT_OBJ = $(OBJ_DIR)/Universe-client.o
+KEYBOARD_OBJ = $(OBJ_DIR)/keyboard-processing.o
 SHARED_LIB = $(SHARED_DIR)/obj/libshared.a
 LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 
 # All dependencies
-ALL_OBJS = $(CLIENT_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
+ALL_OBJS = $(CLIENT_OBJ) $(KEYBOARD_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
 
 # Default target
 all: $(OBJ_DIR) $(BIN_DIR) $(CLIENT_BIN)
@@ -60,7 +62,11 @@ $(CLIENT_BIN): $(ALL_OBJS)
 	@echo "Trash ship client built: $@"
 
 # Compile main source
-$(OBJ_DIR)/Universe-client.o: Universe-client.c
+$(OBJ_DIR)/Universe-client.o: src/Universe-client.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile keyboard processing module
+$(OBJ_DIR)/keyboard-processing.o: src/keyboard-processing.c head/keyboard-processing.h | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Ensure obj directory exists

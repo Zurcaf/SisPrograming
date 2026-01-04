@@ -10,12 +10,12 @@
 #include <SDL2/SDL.h>
 
 #include <config.h>
-#include "../head/universe_data.h"
-#include "../head/display.h"
-#include "../head/Communication.h"
+#include "../../shared/head/universe_data.h"
+#include "../../shared/head/display.h"
+#include "../../shared/head/Communication.h"
 #include "../head/physics-rules.h"
-#include "../head/thread_pool.h"
-#include "../head/validation.h"
+#include "../../shared/head/thread_pool.h"
+#include "../../shared/head/validation.h"
 
 // Global client password storage
 client_password_t client_passwords[MAX_CLIENTS];

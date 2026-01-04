@@ -50,7 +50,6 @@ SHARED_SOURCES = \
 	Communication.c \
 	display.c \
 	universe_data.c \
-	physics-rules.c \
 	ship_movement.pb-c.c \
 	thread_pool.c
 

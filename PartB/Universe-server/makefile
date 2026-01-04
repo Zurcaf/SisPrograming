@@ -29,6 +29,7 @@ BIN_DIR = ../0Executaveis
 
 # Compiler flags (includes shared and libconfig headers)
 CFLAGS = -Wall -Wextra -std=c11 -g \
+         -Ihead \
          -I$(SHARED_DIR)/head \
          -I$(LIBCONFIG_DIR) \
          $(EXTRA_INCLUDES) \
@@ -47,11 +48,12 @@ SERVER_BIN = $(BIN_DIR)/universe-server
 
 # Object files
 SERVER_OBJ = $(OBJ_DIR)/Universe-server.o
+PHYSICS_OBJ = $(OBJ_DIR)/physics-rules.o
 SHARED_LIB = $(SHARED_DIR)/obj/libshared.a
 LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 
 # All dependencies
-ALL_OBJS = $(SERVER_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
+ALL_OBJS = $(SERVER_OBJ) $(PHYSICS_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
 
 # Default target
 all: $(OBJ_DIR) $(BIN_DIR) $(SERVER_BIN)
@@ -62,7 +64,11 @@ $(SERVER_BIN): $(ALL_OBJS)
 	@echo "Universe server built: $@"
 
 # Compile main source
-$(OBJ_DIR)/Universe-server.o: Universe-server.c
+$(OBJ_DIR)/Universe-server.o: src/Universe-server.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile physics source
+$(OBJ_DIR)/physics-rules.o: src/physics-rules.c head/physics-rules.h | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Ensure obj directory exists

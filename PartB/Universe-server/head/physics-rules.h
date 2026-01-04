@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 
-#include "universe_data.h"
+#include <universe_data.h>
 
 /**
  * Update all physics for trash objects

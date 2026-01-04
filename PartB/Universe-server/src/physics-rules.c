@@ -1,4 +1,5 @@
 #include "../head/physics-rules.h"
+#include "../../shared/head/universe_data.h"
 
 /**
  * Main physics update loop: acceleration -> velocity -> position
