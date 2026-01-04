@@ -13,7 +13,8 @@
 /**
  * Per-client password storage
  */
-typedef struct {
+typedef struct
+{
     char client_id;
     char password[MAX_PASSWORD_LEN];
     bool has_password;
@@ -54,7 +55,7 @@ static inline const char *get_client_password(char client_id)
         idx = client_id - 'A';
     else if (client_id >= 'a' && client_id <= 'z')
         idx = 26 + (client_id - 'a');
-    
+
     if (idx >= 0 && idx < MAX_CLIENTS)
         return client_passwords[idx].password;
     return NULL;

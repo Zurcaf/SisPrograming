@@ -47,20 +47,20 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
         char client_id = env->thrust->client_id[0];
         char direction_char = env->thrust->direction[0];
         const char *password = env->thrust->password;
-        
+
         // Validate thrust inputs: client_id, password, and direction
-        if (!is_valid_client_id(client_id) || 
+        if (!is_valid_client_id(client_id) ||
             !is_valid_direction(direction_char) ||
             !is_valid_client_password(client_id, password))
         {
-            printf("[Security] Invalid THRUST: id=%c, dir=%c, auth=%s\n", 
+            printf("[Security] Invalid THRUST: id=%c, dir=%c, auth=%s\n",
                    client_id, direction_char,
                    is_valid_client_password(client_id, password) ? "ok" : "fail");
             envelope__free_unpacked(env, NULL);
             zmq_msg_close(&zmq_msg);
             return -1;
         }
-        
+
         strcpy(message_type, "THRUST");
         *id = client_id;
         *direction = direction_char;
@@ -78,7 +78,7 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
         char client_id = env->connect->client_id[0];
         const char *password = env->connect->password;
         int idx = get_client_index(client_id);
-        
+
         // Validate basic inputs
         if (!is_valid_client_id(client_id) || !is_valid_password_format(password) || idx < 0)
         {
@@ -106,10 +106,10 @@ int read_message(void *fd, char *message_type, char *id, char *direction, bool *
             zmq_msg_close(&zmq_msg);
             return -1;
         }
-        
+
         // Mark client as authenticated
         mark_client_authenticated(client_id);
-        
+
         strcpy(message_type, "CONNECT");
         *id = client_id;
         *direction = ' ';
@@ -155,8 +155,8 @@ typedef struct
     universe_data_t *universe;
     volatile bool running;
     volatile bool game_over;
-    uint64_t last_message_time[52];  // Rate limiting: last message timestamp per ship
-    int message_count[52];           // Rate limiting: message counter per ship
+    uint64_t last_message_time[52]; // Rate limiting: last message timestamp per ship
+    int message_count[52];          // Rate limiting: message counter per ship
 } server_context_t;
 
 /**
@@ -225,19 +225,19 @@ void *communication_thread_func(void *arg)
         if (result != -1)
         {
             int index = ship_index(ship_id);
-            
+
             // Input validation
-            if (index == -1 || 
+            if (index == -1 ||
                 (strcmp("CONNECT", message_type) != 0 && strcmp("THRUST", message_type) != 0))
             {
                 printf("[Security] Invalid message type or ship ID\n");
                 send_response(ctx->universe->zmq_fd, "INVALID");
                 continue;
             }
-            
+
             // Rate limiting: max 100 messages per second per ship
             uint64_t now_ms = get_time_ms();
-            if (now_ms - ctx->last_message_time[index] < 10)  // 10ms = 100 msg/s
+            if (now_ms - ctx->last_message_time[index] < 10) // 10ms = 100 msg/s
             {
                 ctx->message_count[index]++;
                 if (ctx->message_count[index] > 10)
@@ -252,7 +252,7 @@ void *communication_thread_func(void *arg)
                 ctx->last_message_time[index] = now_ms;
                 ctx->message_count[index] = 1;
             }
-            
+
             lock_universe(ctx->sync);
 
             if (strcmp("CONNECT", message_type) == 0 && ship_get_load_at(ctx->universe->ships, index) == -1)
@@ -437,7 +437,7 @@ int main()
         .universe = &universe,
         .running = true,
         .game_over = false};
-    
+
     // Initialize rate limiting arrays
     for (int i = 0; i < 52; i++)
     {
