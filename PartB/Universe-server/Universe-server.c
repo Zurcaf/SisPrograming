@@ -4,6 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL.h>
@@ -14,6 +15,113 @@
 #include "../head/Communication.h"
 #include "../head/physics-rules.h"
 #include "../head/thread_pool.h"
+#include "../head/validation.h"
+
+// Global client password storage
+client_password_t client_passwords[MAX_CLIENTS];
+
+// Server-only message reader (moved from shared Communication.c)
+// Now uses Envelope wrapper to identify message type explicitly
+int read_message(void *fd, char *message_type, char *id, char *direction, bool *thrust_active)
+{
+    zmq_msg_t zmq_msg;
+    zmq_msg_init(&zmq_msg);
+
+    int n = zmq_msg_recv(&zmq_msg, fd, ZMQ_DONTWAIT);
+
+    if (n == -1)
+    {
+        zmq_msg_close(&zmq_msg);
+        return -1;
+    }
+
+    Envelope *env = envelope__unpack(NULL, n, zmq_msg_data(&zmq_msg));
+    if (env == NULL)
+    {
+        zmq_msg_close(&zmq_msg);
+        return -1;
+    }
+
+    if (env->type == ENVELOPE__TYPE__THRUST && env->thrust != NULL)
+    {
+        char client_id = env->thrust->client_id[0];
+        char direction_char = env->thrust->direction[0];
+        const char *password = env->thrust->password;
+        
+        // Validate thrust inputs: client_id, password, and direction
+        if (!is_valid_client_id(client_id) || 
+            !is_valid_direction(direction_char) ||
+            !is_valid_client_password(client_id, password))
+        {
+            printf("[Security] Invalid THRUST: id=%c, dir=%c, auth=%s\n", 
+                   client_id, direction_char,
+                   is_valid_client_password(client_id, password) ? "ok" : "fail");
+            envelope__free_unpacked(env, NULL);
+            zmq_msg_close(&zmq_msg);
+            return -1;
+        }
+        
+        strcpy(message_type, "THRUST");
+        *id = client_id;
+        *direction = direction_char;
+        if (thrust_active)
+        {
+            *thrust_active = env->thrust->active;
+        }
+        envelope__free_unpacked(env, NULL);
+        zmq_msg_close(&zmq_msg);
+        return 0;
+    }
+
+    if (env->type == ENVELOPE__TYPE__CONNECT && env->connect != NULL)
+    {
+        char client_id = env->connect->client_id[0];
+        const char *password = env->connect->password;
+        int idx = get_client_index(client_id);
+        
+        // Validate basic inputs
+        if (!is_valid_client_id(client_id) || !is_valid_password_format(password) || idx < 0)
+        {
+            printf("[Security] Invalid CONNECT inputs for client %c\n", client_id);
+            envelope__free_unpacked(env, NULL);
+            zmq_msg_close(&zmq_msg);
+            return -1;
+        }
+
+        // First time: set password; otherwise, verify it matches the stored one
+        if (!client_passwords[idx].has_password)
+        {
+            if (!set_client_password_if_empty(client_id, password))
+            {
+                printf("[Security] Failed to set password for client %c\n", client_id);
+                envelope__free_unpacked(env, NULL);
+                zmq_msg_close(&zmq_msg);
+                return -1;
+            }
+        }
+        else if (!is_valid_client_password(client_id, password))
+        {
+            printf("[Security] Invalid CONNECT credentials for client %c\n", client_id);
+            envelope__free_unpacked(env, NULL);
+            zmq_msg_close(&zmq_msg);
+            return -1;
+        }
+        
+        // Mark client as authenticated
+        mark_client_authenticated(client_id);
+        
+        strcpy(message_type, "CONNECT");
+        *id = client_id;
+        *direction = ' ';
+        envelope__free_unpacked(env, NULL);
+        zmq_msg_close(&zmq_msg);
+        return 0;
+    }
+
+    envelope__free_unpacked(env, NULL);
+    zmq_msg_close(&zmq_msg);
+    return -1;
+}
 
 /**
  * Shared data structures between threads
@@ -47,6 +155,8 @@ typedef struct
     universe_data_t *universe;
     volatile bool running;
     volatile bool game_over;
+    uint64_t last_message_time[52];  // Rate limiting: last message timestamp per ship
+    int message_count[52];           // Rate limiting: message counter per ship
 } server_context_t;
 
 /**
@@ -115,6 +225,34 @@ void *communication_thread_func(void *arg)
         if (result != -1)
         {
             int index = ship_index(ship_id);
+            
+            // Input validation
+            if (index == -1 || 
+                (strcmp("CONNECT", message_type) != 0 && strcmp("THRUST", message_type) != 0))
+            {
+                printf("[Security] Invalid message type or ship ID\n");
+                send_response(ctx->universe->zmq_fd, "INVALID");
+                continue;
+            }
+            
+            // Rate limiting: max 100 messages per second per ship
+            uint64_t now_ms = get_time_ms();
+            if (now_ms - ctx->last_message_time[index] < 10)  // 10ms = 100 msg/s
+            {
+                ctx->message_count[index]++;
+                if (ctx->message_count[index] > 10)
+                {
+                    printf("[Security] Rate limit exceeded for ship %c\n", ship_id);
+                    send_response(ctx->universe->zmq_fd, "RATELIMIT");
+                    continue;
+                }
+            }
+            else
+            {
+                ctx->last_message_time[index] = now_ms;
+                ctx->message_count[index] = 1;
+            }
+            
             lock_universe(ctx->sync);
 
             if (strcmp("CONNECT", message_type) == 0 && ship_get_load_at(ctx->universe->ships, index) == -1)
@@ -122,11 +260,21 @@ void *communication_thread_func(void *arg)
                 if (index != -1)
                 {
                     ship_set_load_at(ctx->universe->ships, index, 0);
+                    ctx->last_message_time[index] = now_ms;
+                    ctx->message_count[index] = 0;
                     printf("[Comm] Ship %c connected\n", ship_id);
                 }
             }
             else if (strcmp("THRUST", message_type) == 0 && ship_get_load_at(ctx->universe->ships, index) != -1)
             {
+                // Validate thrust inputs
+                if (!is_valid_direction(direction))
+                {
+                    printf("[Security] Invalid direction from ship %c: %c\n", ship_id, direction);
+                    unlock_universe(ctx->sync);
+                    send_response(ctx->universe->zmq_fd, "INVALID");
+                    continue;
+                }
                 apply_thrust(ctx->universe->ships, index, direction, thrust_active);
             }
 
@@ -147,9 +295,8 @@ void *communication_thread_func(void *arg)
         }
         unlock_universe(ctx->sync);
 
-        // Periodic operations
-        uint64_t now_ms = get_time_ms();
-
+        // Periodic operations (get time for periodic tasks)
+        uint64_t now_periodic = get_time_ms();
         // Collision-based trash generation
         // When trash collides with planets, it generates more trash (cascade effect)
         // This increases game difficulty over time
@@ -166,7 +313,7 @@ void *communication_thread_func(void *arg)
         unlock_universe(ctx->sync);
 
         // Periodic trash spawn every 10s
-        if (has_ship && (now_ms - last_spawn_ms) >= trash_spawn_interval_ms)
+        if (has_ship && (now_periodic - last_spawn_ms) >= trash_spawn_interval_ms)
         {
             lock_universe(ctx->sync);
             if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
@@ -175,7 +322,7 @@ void *communication_thread_func(void *arg)
                 printf("[Comm] Periodic spawn. Total trash: %d\n", ctx->universe->n_trash);
             }
             unlock_universe(ctx->sync);
-            last_spawn_ms = now_ms;
+            last_spawn_ms = now_periodic;
         }
 
         // Rotate recycling planet every 30s
@@ -184,7 +331,7 @@ void *communication_thread_func(void *arg)
         // 1. Find current recycling planet (flagged)
         // 2. Clear current flag
         // 3. Set next planet (circular) as new recycling planet (flagged)
-        if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
+        if ((now_periodic - last_recycle_ms) >= recycle_rotate_interval_ms)
         {
             lock_universe(ctx->sync);
             int current = -1;
@@ -204,7 +351,7 @@ void *communication_thread_func(void *arg)
                 printf("[Comm] Recycling planet rotated to index %d\n", next);
             }
             unlock_universe(ctx->sync);
-            last_recycle_ms = now_ms;
+            last_recycle_ms = now_periodic;
         }
 
         // Check for game over (only set flag, don't exit - let main thread display message)
@@ -280,12 +427,23 @@ int main()
         .height = get_height_universe_int(),
         .zmq_fd = create_server_channel()};
 
+    // Initialize client passwords (one password per possible client ID)
+    init_client_passwords();
+    printf("[Server] Client passwords initialized\n");
+
     // Create server context
     server_context_t ctx = {
         .sync = &thread_sync,
         .universe = &universe,
         .running = true,
         .game_over = false};
+    
+    // Initialize rate limiting arrays
+    for (int i = 0; i < 52; i++)
+    {
+        ctx.last_message_time[i] = 0;
+        ctx.message_count[i] = 0;
+    }
 
     // Create worker threads
     pthread_t physics_thread, comm_thread;

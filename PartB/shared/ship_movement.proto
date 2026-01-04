@@ -3,13 +3,15 @@ syntax = "proto2";
 // Message to connect (replaces "CONNECT %c")
 message Connect {
     required string client_id = 1;
+    required string password = 2;  // Authentication token
 }
 
 // Message to control thrust (key down/up)
 message Thrust {
     required string client_id = 1;
-    required string direction = 2;
-    required bool active = 3; // true on key down, false on key up
+    required string password = 2;     // Client password for authentication
+    required string direction = 3;
+    required bool active = 4;         // true on key down, false on key up
 }
 
 // Response from server (replaces simple string responses)

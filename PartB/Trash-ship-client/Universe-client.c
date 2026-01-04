@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_timer.h>
@@ -10,6 +11,7 @@
 #include "../head/universe_data.h"
 #include "../head/display.h"
 #include "../head/Communication.h"
+#include "../shared/head/validation.h"
 
 int main()
 {
@@ -18,6 +20,7 @@ int main()
 
     char ch = '\0';
     char message[100];
+    char password[MAX_PASSWORD_LEN] = {0};
 
     // Initial connection loop
     // Allows client to choose a unique ID (character)
@@ -31,11 +34,18 @@ int main()
             ch = getchar();
             ch = tolower(ch);
         }
-        send_connection_message(fd, ch);
+        // Prompt for password for this client id
+        printf("Enter password for '%c': ", ch);
+        scanf("%63s", password);
+
+        send_connection_message(fd, ch, password);
         receive_response(fd, message);
         if (strcmp(message, "NOT OK") == 0)
         {
             printf("Character '%c' is already in use. Please choose another.\n", ch);
+            // Reset for retry
+            ch = '\0';
+            password[0] = '\0';
             continue; // ID already in use, ask for another
         }
         else
@@ -95,7 +105,7 @@ int main()
                 case SDLK_UP:
                     // Send thrust message to server via ZeroMQ
                     // Request-reply pattern: send and wait for confirmation
-                    send_thrust_message(fd, ch, 'u', true);
+                    send_thrust_message(fd, ch, 'u', true, password);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
                     {
@@ -104,7 +114,7 @@ int main()
                     }
                     break;
                 case SDLK_DOWN:
-                    send_thrust_message(fd, ch, 'd', true);
+                    send_thrust_message(fd, ch, 'd', true, password);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
                     {
@@ -112,7 +122,7 @@ int main()
                     }
                     break;
                 case SDLK_LEFT:
-                    send_thrust_message(fd, ch, 'l', true);
+                    send_thrust_message(fd, ch, 'l', true, password);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
                     {
@@ -120,7 +130,7 @@ int main()
                     }
                     break;
                 case SDLK_RIGHT:
-                    send_thrust_message(fd, ch, 'r', true);
+                    send_thrust_message(fd, ch, 'r', true, password);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
                     {
@@ -134,19 +144,19 @@ int main()
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_UP:
-                    send_thrust_message(fd, ch, 'u', false);
+                    send_thrust_message(fd, ch, 'u', false, password);
                     receive_response(fd, message);
                     break;
                 case SDLK_DOWN:
-                    send_thrust_message(fd, ch, 'd', false);
+                    send_thrust_message(fd, ch, 'd', false, password);
                     receive_response(fd, message);
                     break;
                 case SDLK_LEFT:
-                    send_thrust_message(fd, ch, 'l', false);
+                    send_thrust_message(fd, ch, 'l', false, password);
                     receive_response(fd, message);
                     break;
                 case SDLK_RIGHT:
-                    send_thrust_message(fd, ch, 'r', false);
+                    send_thrust_message(fd, ch, 'r', false, password);
                     receive_response(fd, message);
                     break;
                 }

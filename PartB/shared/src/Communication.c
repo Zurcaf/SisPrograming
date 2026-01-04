@@ -1,4 +1,5 @@
 #include "../head/Communication.h"
+#include "../head/validation.h"
 #include <stdbool.h>
 
 void *create_server_channel()
@@ -12,56 +13,6 @@ void *create_server_channel()
         exit(1);
     }
     return responder;
-}
-
-// Now uses Envelope wrapper to identify message type explicitly
-int read_message(void *fd, char *message_type, char *id, char *direction, bool *thrust_active)
-{
-    zmq_msg_t zmq_msg;
-    zmq_msg_init(&zmq_msg);
-
-    int n = zmq_msg_recv(&zmq_msg, fd, ZMQ_DONTWAIT);
-
-    if (n == -1)
-    {
-        zmq_msg_close(&zmq_msg);
-        return -1;
-    }
-
-    Envelope *env = envelope__unpack(NULL, n, zmq_msg_data(&zmq_msg));
-    if (env == NULL)
-    {
-        zmq_msg_close(&zmq_msg);
-        return -1;
-    }
-
-    if (env->type == ENVELOPE__TYPE__THRUST && env->thrust != NULL)
-    {
-        strcpy(message_type, "THRUST");
-        *id = env->thrust->client_id[0];
-        *direction = env->thrust->direction[0];
-        if (thrust_active)
-        {
-            *thrust_active = env->thrust->active;
-        }
-        envelope__free_unpacked(env, NULL);
-        zmq_msg_close(&zmq_msg);
-        return 0;
-    }
-
-    if (env->type == ENVELOPE__TYPE__CONNECT && env->connect != NULL)
-    {
-        strcpy(message_type, "CONNECT");
-        *id = env->connect->client_id[0];
-        *direction = ' ';
-        envelope__free_unpacked(env, NULL);
-        zmq_msg_close(&zmq_msg);
-        return 0;
-    }
-
-    envelope__free_unpacked(env, NULL);
-    zmq_msg_close(&zmq_msg);
-    return -1;
 }
 
 void send_response(void *fd, char *message_text)
@@ -91,13 +42,15 @@ void *create_client_channel(char *server_ip_addr)
     return requester;
 }
 
-void send_connection_message(void *fd, char ch)
+void send_connection_message(void *fd, char ch, const char *password)
 {
     Connect connect = CONNECT__INIT;
     Envelope env = ENVELOPE__INIT;
 
     char id_str[2] = {ch, '\0'};
+
     connect.client_id = id_str;
+    connect.password = (char *)password;
 
     env.type = ENVELOPE__TYPE__CONNECT;
     env.connect = &connect;
@@ -111,7 +64,7 @@ void send_connection_message(void *fd, char ch)
     free(buf);
 }
 
-void send_thrust_message(void *fd, char ch, char d, bool active)
+void send_thrust_message(void *fd, char ch, char d, bool active, const char *password)
 {
     Thrust thrust = THRUST__INIT;
     Envelope env = ENVELOPE__INIT;
@@ -120,6 +73,7 @@ void send_thrust_message(void *fd, char ch, char d, bool active)
     char dir_str[2] = {d, '\0'};
 
     thrust.client_id = id_str;
+    thrust.password = (char *)password;
     thrust.direction = dir_str;
     thrust.active = active;
 
