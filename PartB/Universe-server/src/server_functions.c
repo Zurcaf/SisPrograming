@@ -439,3 +439,29 @@ void *communication_thread_func(void *arg)
     printf("[Communication] Thread exiting\n");
     return NULL;
 }
+
+// Centralized cleanup helper to avoid repeating frees/teardown
+static void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync)
+{
+    if (rend || win)
+    {
+        destroy_display(win, rend);
+    }
+
+    if (universe)
+    {
+        if (universe->planets)
+            free(universe->planets);
+        if (universe->trash)
+            free(universe->trash);
+        if (universe->ships)
+            free(universe->ships);
+        if (universe->zmq_fd)
+            zmq_close(universe->zmq_fd);
+    }
+
+    if (sync)
+    {
+        thread_sync_cleanup(sync);
+    }
+}

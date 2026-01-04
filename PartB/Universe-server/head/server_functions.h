@@ -4,11 +4,25 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../shared/head/universe_data.h"
-#include "../../shared/head/thread_pool.h"
-#include "../../shared/head/Communication.h"
-#include "../../shared/head/validation.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
+
+#include <SDL2/SDL_timer.h>
+#include <SDL2/SDL.h>
+
+#include <config.h>
+
 #include "physics-rules.h"
+#include "../../shared/head/display.h"
+#include "../../shared/head/thread_pool.h"
+#include "../../shared/head/validation.h"
+#include "../../shared/head/universe_data.h"
+#include "../../shared/head/Communication.h"
 
 // Shared universe data for server threads
 typedef struct
@@ -37,6 +51,9 @@ typedef struct
 
 // Message reader (server side)
 int read_message(void *fd, char *message_type, char *id, char *direction, bool *thrust_active);
+
+// Resource cleanup
+static void cleanup_resources(universe_data_t *universe, SDL_Window *win, SDL_Renderer *rend, thread_sync_t *sync);
 
 // Worker thread entry points
 void *physics_thread_func(void *arg);
