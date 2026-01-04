@@ -378,20 +378,22 @@ void *communication_thread_func(void *arg)
 
 int main()
 {
+    // =========================================================================
+    // INITIALIZATION PHASE
+    // =========================================================================
 
-    // Load configuration expected in the current working directory
     const char *config_path = "init.conf";
 
+    // Load configuration
     load_config(config_path);
     if (get_width_universe_int() <= 0)
     {
         fprintf(stderr, "Failed to load config at %s\n", config_path);
         return EXIT_FAILURE;
     }
-
     printf("Config loaded from: %s\n", config_path);
 
-    // Initialize SDL
+    // Display initialization
     SDL_Window *win = NULL;
     SDL_Renderer *rend = NULL;
     SDL_Color background_color = {0, 0, 0, 255};
@@ -399,10 +401,11 @@ int main()
     if (init_display("Universe Simulator", get_width_universe_int(), get_height_universe_int(),
                      &win, &rend, &background_color) != 0)
     {
+        fprintf(stderr, "Failed to initialize display\n");
         return EXIT_FAILURE;
     }
 
-    // Initialize thread synchronization
+    // Thread synchronization initialization
     thread_sync_t thread_sync;
     if (thread_sync_init(&thread_sync) != 0)
     {
@@ -411,22 +414,58 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // Create universe data
+    // Communication channel (ZMQ)
+    void *zmq_fd = create_server_channel();
+    if (zmq_fd == NULL)
+    {
+        fprintf(stderr, "Failed to create ZMQ server channel\n");
+        destroy_display(win, rend);
+        thread_sync_cleanup(&thread_sync);
+        return EXIT_FAILURE;
+    }
+
+    // =========================================================================
+    // UNIVERSE DATA SETUP
+    // =========================================================================
+
+    // Initialize universe components
+    int width = get_width_universe_int();
+    int height = get_height_universe_int();
+
     universe_data_t universe = {
-        .planets = init_planets(get_n_planets_int(), get_width_universe_int(), get_height_universe_int()),
-        .trash = init_trash(get_init_n_trash_int(), get_max_n_trash_int(),
-                            get_width_universe_int(), get_height_universe_int()),
+        .planets = init_planets(get_n_planets_int(), width, height),
+        .trash = init_trash(get_init_n_trash_int(), get_max_n_trash_int(), width, height),
         .ships = init_ship(get_capacity_ship_int()),
         .n_trash = get_init_n_trash_int(),
         .n_planets = get_n_planets_int(),
         .max_n_trash = get_max_n_trash_int(),
-        .width = get_width_universe_int(),
-        .height = get_height_universe_int(),
-        .zmq_fd = create_server_channel()};
+        .width = width,
+        .height = height,
+        .zmq_fd = zmq_fd};
 
-    // Initialize client passwords (one password per possible client ID)
+    // Validate universe initialization
+    if (universe.planets == NULL || universe.trash == NULL || universe.ships == NULL)
+    {
+        fprintf(stderr, "Failed to initialize universe data\n");
+        if (universe.planets)
+            free(universe.planets);
+        if (universe.trash)
+            free(universe.trash);
+        if (universe.ships)
+            free(universe.ships);
+        zmq_close(universe.zmq_fd);
+        destroy_display(win, rend);
+        thread_sync_cleanup(&thread_sync);
+        return EXIT_FAILURE;
+    }
+
+    // Initialize client passwords
     init_client_passwords();
     printf("[Server] Client passwords initialized\n");
+
+    // =========================================================================
+    // CONTEXT AND THREAD SETUP
+    // =========================================================================
 
     // Create server context
     server_context_t ctx = {
@@ -442,11 +481,16 @@ int main()
         ctx.message_count[i] = 0;
     }
 
-    // Create worker threads
+    // Create and start worker threads
     pthread_t physics_thread, comm_thread;
     if (create_physics_thread(&physics_thread, physics_thread_func, &ctx) != 0)
     {
         fprintf(stderr, "Failed to create physics thread\n");
+        ctx.running = false;
+        free(universe.planets);
+        free(universe.trash);
+        free(universe.ships);
+        zmq_close(universe.zmq_fd);
         destroy_display(win, rend);
         thread_sync_cleanup(&thread_sync);
         return EXIT_FAILURE;
@@ -457,12 +501,20 @@ int main()
         fprintf(stderr, "Failed to create communication thread\n");
         ctx.running = false;
         pthread_join(physics_thread, NULL);
+        free(universe.planets);
+        free(universe.trash);
+        free(universe.ships);
+        zmq_close(universe.zmq_fd);
         destroy_display(win, rend);
         thread_sync_cleanup(&thread_sync);
         return EXIT_FAILURE;
     }
 
     printf("[Main] Physics and Communication threads started\n");
+
+    // =========================================================================
+    // MAIN EVENT LOOP
+    // =========================================================================
 
     // Main thread: SDL event handling and display (30 FPS = 33ms)
     uint64_t last_display_ms = get_time_ms();
@@ -541,13 +593,17 @@ int main()
 
     printf("[Main] Waiting for worker threads to finish\n");
 
+    // =========================================================================
+    // CLEANUP PHASE
+    // =========================================================================
+
     // Wait for worker threads to complete
     pthread_join(physics_thread, NULL);
     pthread_join(comm_thread, NULL);
 
     printf("[Main] All threads completed\n");
 
-    // Cleanup
+    // Release resources
     destroy_display(win, rend);
     free(universe.planets);
     free(universe.trash);

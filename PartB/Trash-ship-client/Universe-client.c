@@ -15,73 +15,100 @@
 
 int main()
 {
+    // =========================================================================
+    // CONNECTION SETUP
+    // =========================================================================
 
+    // Initialize connection
     void *fd = create_client_channel("localhost");
+    if (fd == NULL)
+    {
+        fprintf(stderr, "Failed to create client channel\n");
+        return EXIT_FAILURE;
+    }
 
-    char ch = '\0';
-    char message[100];
+    // Connection credentials
+    char client_id = '\0';
     char password[MAX_PASSWORD_LEN] = {0};
+    char message[100];
 
-    // Initial connection loop
-    // Allows client to choose a unique ID (character)
-    // If ID is already in use, server responds "NOT OK" and client tries again
+    // Connection handshake loop
     while (1)
     {
-        while (!isalpha(ch))
+        // Get unique client ID
+        while (!isalpha(client_id))
         {
-            printf("what is your character(a..z; A..Z)?: ");
-            printf("(Note: Character must be unique among connected players)\n");
-            ch = getchar();
-            ch = tolower(ch);
+            printf("Enter your character (a-z, A-Z): ");
+            printf("(Must be unique among connected players)\n");
+            client_id = getchar();
+            client_id = tolower(client_id);
         }
-        // Prompt for password for this client id
-        printf("Enter password for '%c': ", ch);
+
+        // Get password for this client ID
+        printf("Enter password for '%c': ", client_id);
         scanf("%63s", password);
 
-        send_connection_message(fd, ch, password);
+        // Attempt connection
+        send_connection_message(fd, client_id, password);
         receive_response(fd, message);
-        if (strcmp(message, "NOT OK") == 0)
+
+        if (strcmp(message, "OK") == 0)
         {
-            printf("Character '%c' is already in use. Please choose another.\n", ch);
-            // Reset for retry
-            ch = '\0';
-            password[0] = '\0';
-            continue; // ID already in use, ask for another
+            printf("Connected successfully as '%c'\n", client_id);
+            break; // Connection successful
+        }
+        else if (strcmp(message, "INVALID") == 0)
+        {
+            printf("Connection failed: Invalid credentials or character in use.\n");
+            printf("Please try again with a different character or password.\n\n");
+            client_id = '\0';
+            memset(password, 0, MAX_PASSWORD_LEN);
+            continue;
         }
         else
         {
-            break; // Connection successful
+            printf("Connection failed: Unexpected server response '%s'\n", message);
+            zmq_close(fd);
+            memset(password, 0, MAX_PASSWORD_LEN);
+            return EXIT_FAILURE;
         }
     }
-    printf("Connected successfully as '%c'\n", ch);
-    SDL_Color background_color_c;
-    SDL_Window *win_c = NULL;
-    SDL_Renderer *rend_c = NULL;
 
-    char buffer[256];
-    strcpy(buffer, "Universe Client");
-    strcat(buffer, " ");
-    strncat(buffer, &ch, 1);
-    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    // =========================================================================
+    // DISPLAY INITIALIZATION
+    // =========================================================================
 
-    if (init_display(buffer, 400, 400, &win_c, &rend_c, &background_color_c) != 0)
+    SDL_Color background_color = {0, 0, 0, 255};
+    SDL_Window *window = NULL;
+    SDL_Renderer *renderer = NULL;
+
+    char window_title[256];
+    snprintf(window_title, sizeof(window_title), "Universe Client - %c", client_id);
+
+    if (init_display(window_title, 400, 400, &window, &renderer, &background_color) != 0)
     {
-        printf("Failed to initialize display.\n");
-        exit(1);
+        fprintf(stderr, "Failed to initialize display\n");
+        zmq_close(fd);
+        memset(password, 0, MAX_PASSWORD_LEN);
+        return EXIT_FAILURE;
     }
+
+    // =========================================================================
+    // MAIN GAME LOOP
+    // =========================================================================
 
     int running = 1;
     SDL_Event event;
-
-    // Timer for 30 FPS (render feedback on input)
     Uint32 frame_start = 0;
-    const Uint32 frame_delay = 33; // milliseconds (1000/30 ≈ 33ms)
+    const Uint32 frame_delay = 33; // 30 FPS ≈ 33ms
+
+    printf("[Client] Starting game loop\n");
 
     while (running)
     {
         frame_start = SDL_GetTicks();
 
-        // Process all pending events (non-blocking)
+        // Process input events
         while (SDL_PollEvent(&event))
         {
             switch (event.type)
@@ -91,52 +118,31 @@ int main()
                 break;
 
             case SDL_KEYDOWN:
-                // Ignore key repeats (when key is held down)
-                // We only want to react to initial press, not OS automatic repeats
+                // Ignore key repeats (OS automatic repeats)
                 if (event.key.repeat)
-                {
-                    break; // ignore key repeats; only act on initial press
-                }
+                    break;
+
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_ESCAPE:
                     running = 0;
                     break;
+
+                // Directional inputs: send thrust and render feedback
                 case SDLK_UP:
-                    // Send thrust message to server via ZeroMQ
-                    // Request-reply pattern: send and wait for confirmation
-                    send_thrust_message(fd, ch, 'u', true, password);
-                    receive_response(fd, message);
-                    if (strcmp(message, "OK") == 0)
-                    {
-                        // Local visual feedback (doesn't need server data)
-                        render_client_frame(rend_c, &background_color_c, 'u');
-                    }
-                    break;
                 case SDLK_DOWN:
-                    send_thrust_message(fd, ch, 'd', true, password);
-                    receive_response(fd, message);
-                    if (strcmp(message, "OK") == 0)
-                    {
-                        render_client_frame(rend_c, &background_color_c, 'd');
-                    }
-                    break;
                 case SDLK_LEFT:
-                    send_thrust_message(fd, ch, 'l', true, password);
-                    receive_response(fd, message);
-                    if (strcmp(message, "OK") == 0)
-                    {
-                        render_client_frame(rend_c, &background_color_c, 'l');
-                    }
-                    break;
                 case SDLK_RIGHT:
-                    send_thrust_message(fd, ch, 'r', true, password);
+                {
+                    char direction = (event.key.keysym.sym == SDLK_UP) ? 'u' : (event.key.keysym.sym == SDLK_DOWN) ? 'd'
+                                                                           : (event.key.keysym.sym == SDLK_LEFT)   ? 'l'
+                                                                                                                   : 'r';
+                    send_thrust_message(fd, client_id, direction, true, password);
                     receive_response(fd, message);
                     if (strcmp(message, "OK") == 0)
-                    {
-                        render_client_frame(rend_c, &background_color_c, 'r');
-                    }
+                        render_client_frame(renderer, &background_color, direction);
                     break;
+                }
                 }
                 break;
 
@@ -144,38 +150,39 @@ int main()
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_UP:
-                    send_thrust_message(fd, ch, 'u', false, password);
-                    receive_response(fd, message);
-                    break;
                 case SDLK_DOWN:
-                    send_thrust_message(fd, ch, 'd', false, password);
-                    receive_response(fd, message);
-                    break;
                 case SDLK_LEFT:
-                    send_thrust_message(fd, ch, 'l', false, password);
-                    receive_response(fd, message);
-                    break;
                 case SDLK_RIGHT:
-                    send_thrust_message(fd, ch, 'r', false, password);
+                {
+                    char direction = (event.key.keysym.sym == SDLK_UP) ? 'u' : (event.key.keysym.sym == SDLK_DOWN) ? 'd'
+                                                                           : (event.key.keysym.sym == SDLK_LEFT)   ? 'l'
+                                                                                                                   : 'r';
+                    send_thrust_message(fd, client_id, direction, false, password);
                     receive_response(fd, message);
                     break;
+                }
                 }
                 break;
             }
         }
 
-        // Optional small render tick so the client window stays responsive
-        render_client_frame(rend_c, &background_color_c, ' ');
+        // Render frame
+        render_client_frame(renderer, &background_color, ' ');
 
-        // Frame rate limiting (maintain 30 FPS)
+        // Maintain 30 FPS
         Uint32 frame_time = SDL_GetTicks() - frame_start;
         if (frame_time < frame_delay)
-        {
             SDL_Delay(frame_delay - frame_time);
-        }
     }
-    destroy_display(win_c, rend_c);
+
+    // =========================================================================
+    // CLEANUP
+    // =========================================================================
+
+    printf("[Client] Shutting down\n");
+    destroy_display(window, renderer);
     zmq_close(fd);
+    memset(password, 0, MAX_PASSWORD_LEN);
 
     return EXIT_SUCCESS;
 }
