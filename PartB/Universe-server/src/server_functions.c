@@ -442,20 +442,20 @@ void *communication_thread_func(void *arg)
         // Periodic trash spawn every 10s
         if (has_ship && (now_periodic - last_spawn_ms) >= trash_spawn_interval_ms)
         {
-                /* Drop inactive ships that stopped sending messages */
-                const uint64_t idle_timeout_ms = 5000; // 5s inactivity
-                lock_universe(ctx->sync);
-                for (int si = 0; si < MAX_SHIPS; si++)
+            /* Drop inactive ships that stopped sending messages */
+            const uint64_t idle_timeout_ms = 5000; // 5s inactivity
+            lock_universe(ctx->sync);
+            for (int si = 0; si < MAX_SHIPS; si++)
+            {
+                if (ship_get_load_at(ctx->universe->ships, si) >= 0)
                 {
-                    if (ship_get_load_at(ctx->universe->ships, si) >= 0)
+                    if (ctx->last_message_time[si] > 0 && (now_periodic - ctx->last_message_time[si]) > idle_timeout_ms)
                     {
-                        if (ctx->last_message_time[si] > 0 && (now_periodic - ctx->last_message_time[si]) > idle_timeout_ms)
-                        {
-                            disconnect_ship(ctx, si, client_index_to_id(si));
-                        }
+                        disconnect_ship(ctx, si, client_index_to_id(si));
                     }
                 }
-                unlock_universe(ctx->sync);
+            }
+            unlock_universe(ctx->sync);
             lock_universe(ctx->sync);
             if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
                          ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))

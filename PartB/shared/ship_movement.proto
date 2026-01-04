@@ -34,7 +34,7 @@ message Envelope {
         CONNECT = 0;
         THRUST = 1;
         STATE_REQUEST = 2; // Client can ask explicitly for state (optional)
-        DISCONNECT = 3;     // Client voluntarily disconnects
+        DISCONNECT = 3; // Client voluntarily disconnects
     }
 
     required Type type = 1;
