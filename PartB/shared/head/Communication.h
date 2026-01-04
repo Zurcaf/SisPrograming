@@ -11,8 +11,8 @@
 #define LEFT 'l'
 #define RIGHT 'r'
 
-void *create_client_channel(char *server_addr);
-void *create_server_channel();
+void *create_client_channel(const char *server_addr, int server_port);
+void *create_server_channel(int port);
 // Client supplies its own password (no shared global on client side)
 void send_connection_message(void *fd, char ch, const char *password);
 void send_thrust_message(void *fd, char ch, char direction, bool active, const char *password);

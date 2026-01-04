@@ -137,7 +137,8 @@ static void scenario_rate_limit(void *fd)
 int main(int argc, char **argv)
 {
     const char *server_ip = (argc > 1) ? argv[1] : "localhost";
-    void *fd = create_client_channel((char *)server_ip);
+    int server_port = (argc > 2) ? atoi(argv[2]) : 45007;
+    void *fd = create_client_channel(server_ip, server_port);
 
     scenario_valid_then_thrust(fd);
     scenario_connect_wrong_password(fd);

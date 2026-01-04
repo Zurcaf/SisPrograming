@@ -28,8 +28,8 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // Initialize connection
-    void *fd = create_client_channel("localhost");
+    // Initialize connection with config values
+    void *fd = create_client_channel(get_server_address_str(), get_server_port_int());
     if (fd == NULL)
     {
         fprintf(stderr, "Failed to create client channel\n");

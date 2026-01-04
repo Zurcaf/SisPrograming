@@ -1,17 +1,24 @@
 #include "../head/Communication.h"
 #include "../head/validation.h"
 #include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
 
-void *create_server_channel()
+void *create_server_channel(int port)
 {
     void *context = zmq_ctx_new();
     void *responder = zmq_socket(context, ZMQ_REP);
-    int response = zmq_bind(responder, "tcp://*:45007");
+
+    char bind_addr[256];
+    snprintf(bind_addr, sizeof(bind_addr), "tcp://*:%d", port);
+
+    int response = zmq_bind(responder, bind_addr);
     if (response != 0)
     {
-        printf("Failed to bind server socket\n");
+        printf("Failed to bind server socket to %s\n", bind_addr);
         exit(1);
     }
+    printf("[Server] Listening on port %d\n", port);
     return responder;
 }
 
@@ -45,10 +52,11 @@ void send_response_with_state(void *fd, const char *message_text, const StateSna
     free(buf);
 }
 
-void *create_client_channel(char *server_ip_addr)
+void *create_client_channel(const char *server_addr, int server_port)
 {
-    char server_zmq_addr[100];
-    sprintf(server_zmq_addr, "tcp://%s:45007", server_ip_addr);
+    char server_zmq_addr[256];
+    snprintf(server_zmq_addr, sizeof(server_zmq_addr), "tcp://%s:%d", server_addr, server_port);
+
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     if (zmq_connect(requester, server_zmq_addr) != 0)
@@ -56,6 +64,7 @@ void *create_client_channel(char *server_ip_addr)
         printf("Failed to connect to server at %s\n", server_zmq_addr);
         exit(1);
     }
+    printf("[Client] Connected to %s\n", server_zmq_addr);
     return requester;
 }
 

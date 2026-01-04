@@ -1,6 +1,5 @@
 #include "../head/server_functions.h"
 
-
 int main()
 {
     // =========================================================================
@@ -38,7 +37,7 @@ int main()
     }
 
     // Communication channel (ZMQ)
-    void *zmq_fd = create_server_channel();
+    void *zmq_fd = create_server_channel(get_server_port_int());
     if (zmq_fd == NULL)
     {
         fprintf(stderr, "Failed to create ZMQ server channel\n");
