@@ -28,7 +28,7 @@ OBJ_DIR = obj
 LIBCONFIG_DIR = ../libconfig
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -std=c11 -g \
+CFLAGS = -Wall -Wextra -std=c11 -g -D_DEFAULT_SOURCE \
          -I$(HEADER_DIR) \
          -I$(LIBCONFIG_DIR) \
          $(EXTRA_INCLUDES) \
