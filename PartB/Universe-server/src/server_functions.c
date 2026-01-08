@@ -106,7 +106,7 @@ static void disconnect_ship(server_context_t *ctx, int index, char ship_id)
     ctx->last_message_time[index] = 0;
     ctx->message_count[index] = 0;
 
-    printf("[Comm] Ship %c disconnected\n", ship_id);
+    printf("[Physics] Ship %c disconnected\n", ship_id);
 }
 
 // Server-only message reader (moved from shared Communication.c)
@@ -268,11 +268,28 @@ void *physics_thread_func(void *arg)
     uint64_t last_physics_ms = get_time_ms();
     const uint64_t physics_interval_ms = 10;
 
+    uint64_t last_spawn_ms = get_time_ms();
+    uint64_t last_recycle_ms = get_time_ms();
+    const uint64_t trash_spawn_interval_ms = 10000;    // 10s
+    const uint64_t recycle_rotate_interval_ms = 30000; // 30s
+
     printf("[Physics] Thread started\n");
 
     while (ctx->running)
     {
         uint64_t now_ms = get_time_ms();
+
+        bool has_ship = false;
+        lock_universe(ctx->sync);
+        for (int si = 0; si < MAX_SHIPS; si++)
+        {
+            if (ship_get_load_at(ctx->universe->ships, si) >= 0)
+            {
+                has_ship = true;
+                break;
+            }
+        }
+        unlock_universe(ctx->sync);
 
         if (now_ms - last_physics_ms >= physics_interval_ms)
         {
@@ -285,10 +302,82 @@ void *physics_thread_func(void *arg)
                            ctx->universe->ships, MAX_SHIPS,
                            ctx->universe->width, ctx->universe->height);
 
+            // Check for collisions between trash and planets
+            if (has_ship && check4collisions(ctx->universe->trash, &ctx->universe->n_trash,
+                                 ctx->universe->planets, ctx->universe->n_planets))
+            {
+                if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
+                             ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
+                {
+                    printf("[Physics] Collision! Trash number: %d\n", ctx->universe->n_trash);
+                }
+            }
+
             unlock_universe(ctx->sync);
 
             last_physics_ms = now_ms;
         }
+        
+        // Collision-based trash generation (10ms interval)
+        // When trash collides with planets, it generates more trash (cascade effect)
+        // This increases game difficulty over time
+        // Periodic trash spawn every 10s
+        if (has_ship && (now_ms - last_spawn_ms) >= trash_spawn_interval_ms)
+        {
+            /* Drop inactive ships that stopped sending messages */
+            const uint64_t idle_timeout_ms = 20000; // 20s inactivity
+            lock_universe(ctx->sync);
+            for (int si = 0; si < MAX_SHIPS; si++)
+            {
+                if (ship_get_load_at(ctx->universe->ships, si) >= 0)
+                {
+                    if (ctx->last_message_time[si] > 0 && (now_ms - ctx->last_message_time[si]) > idle_timeout_ms)
+                    {
+                        disconnect_ship(ctx, si, client_index_to_id(si));
+                    }
+                }
+            }
+            if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
+                         ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
+            {
+                printf("[Physics] Periodic spawn. Total trash: %d\n", ctx->universe->n_trash);
+            }
+            unlock_universe(ctx->sync);
+            last_spawn_ms = now_ms;
+        }
+
+        // Rotate recycling planet every 30s
+        if ((now_ms - last_recycle_ms) >= recycle_rotate_interval_ms)
+        {
+            lock_universe(ctx->sync);
+            int current = -1;
+            for (int pi = 0; pi < ctx->universe->n_planets; pi++)
+            {
+                if (planet_is_recycling_at(ctx->universe->planets, pi))
+                {
+                    current = pi;
+                    break;
+                }
+            }
+            if (current >= 0)
+            {
+                int next = (current + 1) % ctx->universe->n_planets;
+                planet_set_recycling_at(ctx->universe->planets, current, false);
+                planet_set_recycling_at(ctx->universe->planets, next, true);
+                printf("[Physics] Recycling planet rotated to index %d\n", next);
+            }
+            unlock_universe(ctx->sync);
+            last_recycle_ms = now_ms;
+        }
+
+        // Check for game over (only set flag, don't exit - let main thread display message)
+        lock_game_state(ctx->sync);
+        if (ctx->universe->n_trash >= ctx->universe->max_n_trash && !ctx->game_over)
+        {
+            ctx->game_over = true;
+            printf("[Physics] GAME OVER - Max trash reached!\n");
+        }
+        unlock_game_state(ctx->sync);
 
         // Sleep briefly to avoid spinning (max ~100Hz)
         usleep(1000); // 1ms
@@ -305,10 +394,6 @@ void *physics_thread_func(void *arg)
 void *communication_thread_func(void *arg)
 {
     server_context_t *ctx = (server_context_t *)arg;
-    uint64_t last_spawn_ms = get_time_ms();
-    uint64_t last_recycle_ms = get_time_ms();
-    const uint64_t trash_spawn_interval_ms = 10000;    // 10s
-    const uint64_t recycle_rotate_interval_ms = 30000; // 30s
     char message_type[1024];
     char ship_id;
     char direction;
@@ -411,94 +496,6 @@ void *communication_thread_func(void *arg)
             send_response_with_state(ctx->universe->zmq_fd, "OK", &snapshot);
             free_state_snapshot(&snapshot);
         }
-
-        // Check for ship presence
-        bool has_ship = false;
-        lock_universe(ctx->sync);
-        for (int si = 0; si < MAX_SHIPS; si++)
-        {
-            if (ship_get_load_at(ctx->universe->ships, si) >= 0)
-            {
-                has_ship = true;
-                break;
-            }
-        }
-        unlock_universe(ctx->sync);
-
-        // Periodic operations (get time for periodic tasks)
-        uint64_t now_periodic = get_time_ms();
-        // Collision-based trash generation
-        // When trash collides with planets, it generates more trash (cascade effect)
-        // This increases game difficulty over time
-        lock_universe(ctx->sync);
-        if (has_ship && check4collisions(ctx->universe->trash, &ctx->universe->n_trash,
-                                         ctx->universe->planets, ctx->universe->n_planets))
-        {
-            if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
-                         ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
-            {
-                printf("[Comm] Collision! New trash created. Total: %d\n", ctx->universe->n_trash);
-            }
-        }
-        unlock_universe(ctx->sync);
-
-        // Periodic trash spawn every 10s
-        if (has_ship && (now_periodic - last_spawn_ms) >= trash_spawn_interval_ms)
-        {
-            /* Drop inactive ships that stopped sending messages */
-            const uint64_t idle_timeout_ms = 20000; // 20s inactivity
-            lock_universe(ctx->sync);
-            for (int si = 0; si < MAX_SHIPS; si++)
-            {
-                if (ship_get_load_at(ctx->universe->ships, si) >= 0)
-                {
-                    if (ctx->last_message_time[si] > 0 && (now_periodic - ctx->last_message_time[si]) > idle_timeout_ms)
-                    {
-                        disconnect_ship(ctx, si, client_index_to_id(si));
-                    }
-                }
-            }
-            if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
-                         ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
-            {
-                printf("[Comm] Periodic spawn. Total trash: %d\n", ctx->universe->n_trash);
-            }
-            unlock_universe(ctx->sync);
-            last_spawn_ms = now_periodic;
-        }
-
-        // Rotate recycling planet every 30s
-        if ((now_periodic - last_recycle_ms) >= recycle_rotate_interval_ms)
-        {
-            lock_universe(ctx->sync);
-            int current = -1;
-            for (int pi = 0; pi < ctx->universe->n_planets; pi++)
-            {
-                if (planet_is_recycling_at(ctx->universe->planets, pi))
-                {
-                    current = pi;
-                    break;
-                }
-            }
-            if (current >= 0)
-            {
-                int next = (current + 1) % ctx->universe->n_planets;
-                planet_set_recycling_at(ctx->universe->planets, current, false);
-                planet_set_recycling_at(ctx->universe->planets, next, true);
-                printf("[Comm] Recycling planet rotated to index %d\n", next);
-            }
-            unlock_universe(ctx->sync);
-            last_recycle_ms = now_periodic;
-        }
-
-        // Check for game over (only set flag, don't exit - let main thread display message)
-        lock_game_state(ctx->sync);
-        if (ctx->universe->n_trash >= ctx->universe->max_n_trash && !ctx->game_over)
-        {
-            ctx->game_over = true;
-            printf("[Comm] GAME OVER - Max trash reached!\n");
-        }
-        unlock_game_state(ctx->sync);
 
         usleep(10000); // 10ms sleep to avoid busy waiting
     }
