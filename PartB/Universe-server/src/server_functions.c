@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE
+
 #include "../head/server_functions.h"
 
 #include <stdio.h>
@@ -89,7 +91,8 @@ static void free_state_snapshot(StateSnapshot *snapshot)
 // Provide global storage for client passwords (declared extern in validation.h)
 client_password_t client_passwords[MAX_CLIENTS];
 
-// Helper: disconnect ship and clear auth
+
+// Helper: disconnect ship and notify client
 static void disconnect_ship(server_context_t *ctx, int index, char ship_id)
 {
     vector_t zero = {0};
@@ -443,7 +446,7 @@ void *communication_thread_func(void *arg)
         if (has_ship && (now_periodic - last_spawn_ms) >= trash_spawn_interval_ms)
         {
             /* Drop inactive ships that stopped sending messages */
-            const uint64_t idle_timeout_ms = 5000; // 5s inactivity
+            const uint64_t idle_timeout_ms = 20000; // 20s inactivity
             lock_universe(ctx->sync);
             for (int si = 0; si < MAX_SHIPS; si++)
             {
@@ -455,8 +458,6 @@ void *communication_thread_func(void *arg)
                     }
                 }
             }
-            unlock_universe(ctx->sync);
-            lock_universe(ctx->sync);
             if (addTrash(ctx->universe->trash, &ctx->universe->n_trash,
                          ctx->universe->max_n_trash, ctx->universe->width, ctx->universe->height))
             {

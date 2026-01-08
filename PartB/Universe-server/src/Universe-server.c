@@ -1,6 +1,10 @@
+#define _DEFAULT_SOURCE
+
 #include "../head/server_functions.h"
 
 #include <signal.h>
+#include <unistd.h>
+
 
 /* Global flag for graceful shutdown */
 static volatile sig_atomic_t shutdown_requested = 0;

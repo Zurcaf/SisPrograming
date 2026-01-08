@@ -93,7 +93,7 @@ int main()
         }
         else
         {
-            printf("Connection failed: Unexpected server response '%s'\n", message);
+            printf("Connection failed: Unable to connect '%s'\n", message);
             zmq_close(fd);
             memset(password, 0, MAX_PASSWORD_LEN);
             return EXIT_FAILURE;
@@ -171,6 +171,15 @@ int main()
 
             if (resp)
             {
+                // Check if server kicked us
+                if (resp->message && (strcmp(resp->message, "KICKED") == 0 || strcmp(resp->message, "BYE") == 0))
+                {
+                    printf("[Client] Server disconnected this client\n");
+                    server_response__free_unpacked(resp, NULL);
+                    running = 0;
+                    break;
+                }
+                
                 if (resp->state)
                 {
                     if (latest_state)
@@ -203,6 +212,23 @@ int main()
 
             if (state_resp)
             {
+                
+                // Check if our ship was disconnected by checking the state
+                if (state_resp->state && state_resp->state->ships)
+                {
+                    int my_index = (isalpha(client_id) ? (isupper(client_id) ? client_id - 'A' : client_id - 'a' + 26) : -1);
+                    if (my_index >= 0 && my_index < (int)state_resp->state->n_ships)
+                    {
+                        if (!state_resp->state->ships[my_index]->connected)
+                        {
+                            printf("[Client] Server disconnected this client\n");
+                            server_response__free_unpacked(state_resp, NULL);
+                            running = 0;
+                            break;
+                        }
+                    }
+                }
+                
                 if (state_resp->state)
                 {
                     if (latest_state)
