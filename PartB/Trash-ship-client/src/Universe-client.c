@@ -131,6 +131,7 @@ int main()
     Uint32 frame_start = 0;
     const Uint32 frame_delay = 33; // 30 FPS ≈ 33ms
     Uint32 last_state_request = 0;
+    int server_alive = 1; // Track if server is still responding
 
     ServerResponse *latest_state = NULL; // cached snapshot to render
 
@@ -210,6 +211,14 @@ int main()
             ServerResponse *state_resp = receive_response_full(fd);
             last_state_request = now;
 
+            if (state_resp == NULL)
+            {
+                printf("[Client] Server is not responding - connection lost\n");
+                server_alive = 0;
+                running = 0;
+                break;
+            }
+
             if (state_resp)
             {
                 
@@ -268,8 +277,8 @@ int main()
 
     printf("[Client] Shutting down\n");
 
-    // Send a clean disconnect to server
-    if (fd && isalpha(client_id))
+    // Send a clean disconnect to server (only if server is still alive)
+    if (server_alive && fd && isalpha(client_id))
     {
         send_disconnect_message(fd, client_id, password);
     }

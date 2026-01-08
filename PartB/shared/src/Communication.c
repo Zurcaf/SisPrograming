@@ -109,7 +109,7 @@ void *create_client_channel(const char *server_addr, int server_port)
     void *requester = zmq_socket(context, ZMQ_REQ);
 
     /* Short timeouts to avoid indefinite block; retries for transient failures */
-    configure_socket(requester, 2000, 2000);
+    configure_socket(requester, 1000, 1000);
 
     int attempts = 3;
     int connected = 0;
