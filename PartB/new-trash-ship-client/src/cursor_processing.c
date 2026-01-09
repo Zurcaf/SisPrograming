@@ -1,19 +1,10 @@
-#include "keyboard-processing.h"
+#include "cursor_processing.h"
 #include "../head/Communication.h"
 #include "../shared/head/validation.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
-/**
- * Convert SDL key event to direction character
- * Returns:
- *   'u' - up
- *   'd' - down
- *   'l' - left
- *   'r' - right
- *   ' ' - no direction (invalid)
- */
 char get_direction_from_key(SDL_Keycode key)
 {
     switch (key)
@@ -27,57 +18,40 @@ char get_direction_from_key(SDL_Keycode key)
     case SDLK_RIGHT:
         return 'r';
     default:
-        return ' '; // Invalid direction
+        return ' ';
     }
 }
 
-/**
- * Check if key is a directional key
- * Returns 1 if true, 0 otherwise
- */
 int is_directional_key(SDL_Keycode key)
 {
     return (key == SDLK_UP || key == SDLK_DOWN ||
             key == SDLK_LEFT || key == SDLK_RIGHT);
 }
 
-/**
- * Check if key is ESC or quit command
- */
 int is_quit_key(SDL_Keycode key)
 {
     return (key == SDLK_ESCAPE);
 }
 
-/**
- * Process keyboard input and send thrust messages to server
- * Handles:
- * - Direction keys: UP, DOWN, LEFT, RIGHT
- * - ESC to quit
- * Returns 0 on success, -1 on error
- */
 int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
                            const char *password, ServerResponse **out_response)
 {
     if (out_response)
     {
-        *out_response = NULL; // default when nothing is sent
+        *out_response = NULL;
     }
 
-    // Validate inputs
     if (event == NULL || zmq_fd == NULL || password == NULL || out_response == NULL)
     {
         fprintf(stderr, "[Keyboard] Invalid input parameters\n");
         return -1;
     }
 
-    // Only process key events
     if (event->type != SDL_KEYDOWN && event->type != SDL_KEYUP)
     {
-        return 0; // Not a keyboard event, but valid
+        return 0;
     }
 
-    // Ignore key repeats from OS
     if (event->key.repeat)
     {
         return 0;
@@ -85,13 +59,11 @@ int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
 
     SDL_Keycode key = event->key.keysym.sym;
 
-    // Check for quit command
     if (is_quit_key(key))
     {
-        return -1; // Signal to quit
+        return -1;
     }
 
-    // Check for directional input
     if (is_directional_key(key))
     {
         char direction = get_direction_from_key(key);
@@ -103,10 +75,8 @@ int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
             return -1;
         }
 
-        // Send thrust message to server
         send_thrust_message(zmq_fd, client_id, direction, thrust_active, password);
 
-        // Receive server response (with potential state)
         ServerResponse *resp = receive_response_full(zmq_fd);
         if (resp == NULL)
         {
@@ -116,7 +86,6 @@ int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
 
         *out_response = resp;
 
-        // Log the input
         if (thrust_active)
         {
             printf("[Keyboard] Thrust %c activated\n", direction);
@@ -129,6 +98,5 @@ int process_keyboard_input(SDL_Event *event, void *zmq_fd, char client_id,
         return 0;
     }
 
-    // Unhandled key - not an error, just ignore it
     return 0;
 }

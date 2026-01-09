@@ -336,16 +336,13 @@ void check_ship_planet_collisions(ship_t *ships, int total_ships,
                                   trash_t *trash, int total_trash)
 {
     const float PLANET_RADIUS = 14.0f;
+    int load, aux = 0;
 
     for (int si = 0; si < total_ships; si++)
     {
-        // Skip disconnected ships
-        if (ship_get_load_at(ships, si) < 0)
-            continue;
-
-        // Skip if no trash to drop
-        if (ship_get_load_at(ships, si) <= 0)
-            continue;
+        load = ship_get_load_at(ships, si);
+        // Skip if no trash to drop or disconnected if load = -1
+        if (load <= 0)continue;
 
         float ship_x = ship_get_x_at(ships, si);
         float ship_y = ship_get_y_at(ships, si);
@@ -359,26 +356,31 @@ void check_ship_planet_collisions(ship_t *ships, int total_ships,
             if (distance < PLANET_RADIUS)
             {
                 bool is_recycling = planet_is_recycling_at(planets, pi);
+                aux = 0;
 
-                // Process all collected trash
-                for (int ti = 0; ti < total_trash; ti++)
+                // Recycle/drop up to ship's load amount of mass==0 trash
+                for (int ti = 0; ti < total_trash && aux < load; ti++)
                 {
-                    if (trash_get_mass_at(trash, ti) == 0) // Collected trash
+                    if (trash_get_mass_at(trash, ti) == 0)
                     {
                         if (is_recycling)
                         {
                             trash_set_mass_at(trash, ti, -1); // Remove from universe
+                            planet_increment_recycled_count_at(planets, pi);
                         }
                         else
                         {
                             trash_set_mass_at(trash, ti, 1); // Drop back to universe
                         }
+                        aux++;
                     }
                 }
-
                 ship_reset_load_at(ships, si); // Empty the ship
-                break;                         // Only one planet collision per frame
+                break;
             }
+
         }
     }
 }
+    
+

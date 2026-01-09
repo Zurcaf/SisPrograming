@@ -6,6 +6,7 @@ struct planet
     float x, y;
     float mass;
     bool is_recycling;
+    int recycled_count; // number of trash recycled by this planet
 };
 
 struct trash
@@ -70,6 +71,7 @@ planet_t *init_planets(int n, int width, int height)
         planets[i].y = rand() % height;
         planets[i].mass = 10; // 10 mass units
         planets[i].is_recycling = false;
+        planets[i].recycled_count = 0;
     }
 
     int random = rand() % n; // select random planet to be recycling planet
@@ -85,7 +87,7 @@ bool addTrash(trash_t *trash, int *n_trash, int max, int width, int height)
     // Try to reuse an empty slot
     for (int i = 0; i < *n_trash; i++)
     {
-        if (trash[i].mass <= 0)
+        if (trash[i].mass < 0)
         {
             idx = i;
             break;
@@ -279,6 +281,8 @@ void planet_set_mass_at(planet_t *list, int idx, float mass) { list[idx].mass = 
 bool planet_is_recycling(const planet_t *p) { return p->is_recycling; }
 bool planet_is_recycling_at(const planet_t *list, int idx) { return list[idx].is_recycling; }
 void planet_set_recycling_at(planet_t *list, int idx, bool is_recycling) { list[idx].is_recycling = is_recycling; }
+int planet_get_recycled_count_at(const planet_t *list, int idx) { return list[idx].recycled_count; }
+void planet_increment_recycled_count_at(planet_t *list, int idx) { list[idx].recycled_count += 1; }
 
 // ----------------------
 // Trash accessors

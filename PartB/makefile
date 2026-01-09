@@ -8,10 +8,10 @@
 #
 # On macOS: brew install sdl2 protobuf-c libconfig zmq
 
-.PHONY: all clean help shared universe-server trash-ship-client dashboard
+.PHONY: all clean help shared new-universe-server new-trash-ship-client dashboard
 
 # Default target
-all: shared universe-server trash-ship-client
+all: shared new-universe-server new-trash-ship-client
 
 # Build shared library components (Communication, display, universe_data, protobuf)
 shared:
@@ -19,14 +19,14 @@ shared:
 	$(MAKE) -C shared
 
 # Build universe server
-universe-server: shared
-	@echo "Building universe-server..."
-	$(MAKE) -C Universe-server
+new-universe-server: shared
+	@echo "Building new-universe-server..."
+	$(MAKE) -C new-universe-server
 
-# Build trash-ship-client
-trash-ship-client: shared
-	@echo "Building trash-ship-client..."
-	$(MAKE) -C Trash-ship-client
+# Build new-trash-ship-client
+new-trash-ship-client: shared
+	@echo "Building new-trash-ship-client..."
+	$(MAKE) -C new-trash-ship-client
 
 # Build dashboard (when implemented)
 dashboard: shared
@@ -37,8 +37,8 @@ dashboard: shared
 clean:
 	@echo "Cleaning all components..."
 	$(MAKE) -C shared clean
-	$(MAKE) -C Universe-server clean
-	$(MAKE) -C Trash-ship-client clean
+	$(MAKE) -C new-universe-server clean
+	$(MAKE) -C new-trash-ship-client clean
 	$(MAKE) -C Dashboard clean 2>/dev/null || true
 	$(MAKE) -C libconfig clean
 
@@ -49,8 +49,8 @@ help:
 	@echo "=========================================="
 	@echo "  make all              - Build all components (default)"
 	@echo "  make shared           - Build only shared components"
-	@echo "  make universe-server  - Build universe server"
-	@echo "  make trash-ship-client - Build trash-ship client"
+	@echo "  make new-universe-server  - Build universe server"
+	@echo "  make new-trash-ship-client - Build trash-ship client"
 	@echo "  make dashboard        - Build dashboard"
 	@echo "  make clean            - Clean all build artifacts"
 	@echo "  make help             - Show this help message"

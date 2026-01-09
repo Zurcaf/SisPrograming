@@ -37,6 +37,8 @@ void planet_set_mass_at(planet_t *list, int idx, float mass);
 bool planet_is_recycling(const planet_t *p);
 bool planet_is_recycling_at(const planet_t *list, int idx);
 void planet_set_recycling_at(planet_t *list, int idx, bool is_recycling);
+int planet_get_recycled_count_at(const planet_t *list, int idx);
+void planet_increment_recycled_count_at(planet_t *list, int idx);
 
 // --- Trash accessors ---
 float trash_get_x(const trash_t *t);

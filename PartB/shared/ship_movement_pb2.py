@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x13ship_movement.proto\".\n\x07\x43onnect\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\"P\n\x06Thrust\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\x12\x11\n\tdirection\x18\x03 \x02(\t\x12\x0e\n\x06\x61\x63tive\x18\x04 \x02(\x08\"1\n\nDisconnect\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\"@\n\x0eServerResponse\x12\x0f\n\x07message\x18\x01 \x02(\t\x12\x1d\n\x05state\x18\x02 \x01(\x0b\x32\x0e.StateSnapshot\"\xc1\x01\n\x08\x45nvelope\x12\x1c\n\x04type\x18\x01 \x02(\x0e\x32\x0e.Envelope.Type\x12\x19\n\x07\x63onnect\x18\x02 \x01(\x0b\x32\x08.Connect\x12\x17\n\x06thrust\x18\x03 \x01(\x0b\x32\x07.Thrust\x12\x1f\n\ndisconnect\x18\x04 \x01(\x0b\x32\x0b.Disconnect\"B\n\x04Type\x12\x0b\n\x07\x43ONNECT\x10\x00\x12\n\n\x06THRUST\x10\x01\x12\x11\n\rSTATE_REQUEST\x10\x02\x12\x0e\n\nDISCONNECT\x10\x03\"G\n\x0bPlanetState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04mass\x18\x03 \x02(\x02\x12\x14\n\x0cis_recycling\x18\x04 \x02(\x08\"0\n\nTrashState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04mass\x18\x03 \x02(\x02\"T\n\tShipState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04load\x18\x03 \x02(\x05\x12\x10\n\x08\x63\x61pacity\x18\x04 \x02(\x05\x12\x11\n\tconnected\x18\x05 \x02(\x08\"e\n\rStateSnapshot\x12\x1d\n\x07planets\x18\x01 \x03(\x0b\x32\x0c.PlanetState\x12\x1a\n\x05trash\x18\x02 \x03(\x0b\x32\x0b.TrashState\x12\x19\n\x05ships\x18\x03 \x03(\x0b\x32\n.ShipState'
+  serialized_pb=b'\n\x13ship_movement.proto\".\n\x07\x43onnect\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\"P\n\x06Thrust\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\x12\x11\n\tdirection\x18\x03 \x02(\t\x12\x0e\n\x06\x61\x63tive\x18\x04 \x02(\x08\"1\n\nDisconnect\x12\x11\n\tclient_id\x18\x01 \x02(\t\x12\x10\n\x08password\x18\x02 \x02(\t\"@\n\x0eServerResponse\x12\x0f\n\x07message\x18\x01 \x02(\t\x12\x1d\n\x05state\x18\x02 \x01(\x0b\x32\x0e.StateSnapshot\"\xc1\x01\n\x08\x45nvelope\x12\x1c\n\x04type\x18\x01 \x02(\x0e\x32\x0e.Envelope.Type\x12\x19\n\x07\x63onnect\x18\x02 \x01(\x0b\x32\x08.Connect\x12\x17\n\x06thrust\x18\x03 \x01(\x0b\x32\x07.Thrust\x12\x1f\n\ndisconnect\x18\x04 \x01(\x0b\x32\x0b.Disconnect\"B\n\x04Type\x12\x0b\n\x07\x43ONNECT\x10\x00\x12\n\n\x06THRUST\x10\x01\x12\x11\n\rSTATE_REQUEST\x10\x02\x12\x0e\n\nDISCONNECT\x10\x03\"_\n\x0bPlanetState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04mass\x18\x03 \x02(\x02\x12\x14\n\x0cis_recycling\x18\x04 \x02(\x08\x12\x16\n\x0erecycled_count\x18\x05 \x02(\x05\"0\n\nTrashState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04mass\x18\x03 \x02(\x02\"T\n\tShipState\x12\t\n\x01x\x18\x01 \x02(\x02\x12\t\n\x01y\x18\x02 \x02(\x02\x12\x0c\n\x04load\x18\x03 \x02(\x05\x12\x10\n\x08\x63\x61pacity\x18\x04 \x02(\x05\x12\x11\n\tconnected\x18\x05 \x02(\x08\"e\n\rStateSnapshot\x12\x1d\n\x07planets\x18\x01 \x03(\x0b\x32\x0c.PlanetState\x12\x1a\n\x05trash\x18\x02 \x03(\x0b\x32\x0b.TrashState\x12\x19\n\x05ships\x18\x03 \x03(\x0b\x32\n.ShipState'
 )
 
 
@@ -320,6 +320,13 @@ _PLANETSTATE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='recycled_count', full_name='PlanetState.recycled_count', index=4,
+      number=5, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -333,7 +340,7 @@ _PLANETSTATE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=466,
-  serialized_end=537,
+  serialized_end=561,
 )
 
 
@@ -378,8 +385,8 @@ _TRASHSTATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=539,
-  serialized_end=587,
+  serialized_start=563,
+  serialized_end=611,
 )
 
 
@@ -438,8 +445,8 @@ _SHIPSTATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=589,
-  serialized_end=673,
+  serialized_start=613,
+  serialized_end=697,
 )
 
 
@@ -484,8 +491,8 @@ _STATESNAPSHOT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=675,
-  serialized_end=776,
+  serialized_start=699,
+  serialized_end=800,
 )
 
 _SERVERRESPONSE.fields_by_name['state'].message_type = _STATESNAPSHOT

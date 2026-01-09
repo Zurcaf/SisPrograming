@@ -50,6 +50,7 @@ message PlanetState {
     required float y = 2;
     required float mass = 3;
     required bool is_recycling = 4;
+    required int32 recycled_count = 5;
 }
 
 message TrashState {

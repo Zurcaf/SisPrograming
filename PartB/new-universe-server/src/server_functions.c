@@ -25,6 +25,7 @@ static void build_state_snapshot(const universe_data_t *universe, StateSnapshot 
             snapshot->planets[i]->y = planet_get_y_at(universe->planets, (int)i);
             snapshot->planets[i]->mass = planet_get_mass_at(universe->planets, (int)i);
             snapshot->planets[i]->is_recycling = planet_is_recycling_at(universe->planets, (int)i);
+            snapshot->planets[i]->recycled_count = planet_get_recycled_count_at(universe->planets, (int)i);
         }
     }
 

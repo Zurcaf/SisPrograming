@@ -79,6 +79,8 @@ class Dashboard:
         self.context = None
         self.socket = None
         self.connected = False
+        self.consecutive_failures = 0
+        self.max_failures = 2  # Exit after 2 consecutive failures
     
     def connect(self):
         """Connect to the server via ZMQ."""
@@ -86,6 +88,8 @@ class Dashboard:
             self.context = zmq.Context()
             self.socket = self.context.socket(zmq.REQ)
             
+            # Set linger to 0 to avoid blocking on close
+            self.socket.setsockopt(zmq.LINGER, 0)
             # Set timeout to avoid hanging
             self.socket.setsockopt(zmq.RCVTIMEO, 5000)  # 5 second timeout
             
@@ -115,9 +119,6 @@ class Dashboard:
             env = ship_movement.Envelope()
             env.type = ship_movement.Envelope.STATE_REQUEST
             
-            # Debug: print enum value
-            print(f"[Dashboard] Sending STATE_REQUEST (type={env.type})")
-            
             # Send request
             self.socket.send(env.SerializeToString())
             
@@ -130,17 +131,21 @@ class Dashboard:
             
             # Check if state is present
             if response.HasField('state'):
+                self.consecutive_failures = 0  # Reset on success
                 return response.state
             else:
                 print(f"[Dashboard] Response missing state field")
+                self.consecutive_failures += 1
                 return None
         except zmq.error.Again:
             print("[Dashboard] Request timeout - server did not respond")
+            self.consecutive_failures += 1
             # Recreate socket after timeout to reset state
             self._recreate_socket()
             return None
         except Exception as e:
             print(f"[Dashboard] Error requesting state: {e}")
+            self.consecutive_failures += 1
             # Recreate socket after error to reset state
             self._recreate_socket()
             return None
@@ -149,8 +154,11 @@ class Dashboard:
         """Recreate socket to reset REQ state machine."""
         try:
             if self.socket:
+                # Set linger to 0 before closing
+                self.socket.setsockopt(zmq.LINGER, 0)
                 self.socket.close()
             self.socket = self.context.socket(zmq.REQ)
+            self.socket.setsockopt(zmq.LINGER, 0)
             self.socket.setsockopt(zmq.RCVTIMEO, 5000)
             connection_string = f"tcp://{self.server_host}:{self.server_port}"
             self.socket.connect(connection_string)
@@ -177,12 +185,9 @@ class Dashboard:
         print("\nPLANETS (Recycled trash)")
         if snapshot.planets:
             for i, planet in enumerate(snapshot.planets):
-                recycled_count = 0
-                # Count how many ships have recycled at this planet
-                # (In current implementation, we'd need ship-planet association)
-                # For now, we display planet info
-                recycling_status = "RECYCLING" if planet.is_recycling else ""
-                print(f"  {chr(65 + i)} - {recycled_count} {recycling_status}".strip())
+                recycled = planet.recycled_count
+                recycling_status = " <- RECYCLING" if planet.is_recycling else ""
+                print(f"{chr(65 + i)} : {recycled}{recycling_status}")
         else:
             print("  (No planets)")
         
@@ -227,10 +232,17 @@ class Dashboard:
         
         try:
             while True:
+                # Check if too many failures
+                if self.consecutive_failures >= self.max_failures:
+                    print(f"\n[Dashboard] Server disconnected ({self.max_failures} consecutive failures)")
+                    print("[Dashboard] Exiting...")
+                    break
+
                 # Request and display state
                 snapshot = self.request_state()
-                self.display_state(snapshot)
-                
+                if snapshot:
+                    self.display_state(snapshot)
+
                 # Wait before next request
                 time.sleep(update_interval)
         except KeyboardInterrupt:
@@ -239,10 +251,13 @@ class Dashboard:
             print(f"[Dashboard] Error in main loop: {e}")
         finally:
             self.cleanup()
+            sys.exit(0)
     
     def cleanup(self):
         """Clean up ZMQ resources."""
         if self.socket:
+            # Set linger to 0 to avoid blocking on close
+            self.socket.setsockopt(zmq.LINGER, 0)
             self.socket.close()
         if self.context:
             self.context.term()
@@ -253,7 +268,7 @@ class Dashboard:
 def main():
     """Main entry point."""
     # Try to load config from dashboard_init.conf
-    config_path = os.path.join(os.path.dirname(__file__), '..', '0Executaveis', 'dashboard_init.conf')
+    config_path = os.path.join(os.path.dirname(__file__), 'dashboard_init.conf')
     
     server_host = '127.0.0.1'
     server_port = 5555

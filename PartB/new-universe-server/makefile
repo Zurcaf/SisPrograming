@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for Trash Ship Client
+# Makefile for Universe Server
 # =====================================================================
 
 CC = gcc
@@ -35,38 +35,45 @@ CFLAGS = -Wall -Wextra -std=c11 -g \
          $(EXTRA_INCLUDES) \
          $(shell sdl2-config --cflags) \
          $(shell pkg-config --cflags libconfig++ libprotobuf-c libzmq) \
+         -pthread \
          $(ASAN_FLAGS)
 
 LDFLAGS = $(shell sdl2-config --libs) \
           $(shell pkg-config --libs libconfig++ libprotobuf-c libzmq) -lm \
+          -pthread \
           $(ASAN_FLAGS)
 
 # Executable name
-CLIENT_BIN = $(BIN_DIR)/trash-ship-client
+SERVER_BIN = $(BIN_DIR)/new-universe-server
 
 # Object files
-CLIENT_OBJ = $(OBJ_DIR)/Universe-client.o
-KEYBOARD_OBJ = $(OBJ_DIR)/keyboard-processing.o
+SERVER_OBJ = $(OBJ_DIR)/new-universe-server.o
+SERVER_FUNCS_OBJ = $(OBJ_DIR)/server_functions.o
+PHYSICS_OBJ = $(OBJ_DIR)/physics-rules.o
 SHARED_LIB = $(SHARED_DIR)/obj/libshared.a
 LIBCONFIG_OBJ = $(LIBCONFIG_DIR)/config.o
 
 # All dependencies
-ALL_OBJS = $(CLIENT_OBJ) $(KEYBOARD_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
+ALL_OBJS = $(SERVER_OBJ) $(SERVER_FUNCS_OBJ) $(PHYSICS_OBJ) $(SHARED_LIB) $(LIBCONFIG_OBJ)
 
 # Default target
-all: $(OBJ_DIR) $(BIN_DIR) $(CLIENT_BIN)
+all: $(OBJ_DIR) $(BIN_DIR) $(SERVER_BIN)
 
 # Link executable
-$(CLIENT_BIN): $(ALL_OBJS)
+$(SERVER_BIN): $(ALL_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
-	@echo "Trash ship client built: $@"
+	@echo "Universe server built: $@"
 
 # Compile main source
-$(OBJ_DIR)/Universe-client.o: src/Universe-client.c | $(OBJ_DIR)
+$(OBJ_DIR)/new-universe-server.o: src/new-universe-server.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile keyboard processing module
-$(OBJ_DIR)/keyboard-processing.o: src/keyboard-processing.c head/keyboard-processing.h | $(OBJ_DIR)
+# Compile server functions source
+$(OBJ_DIR)/server_functions.o: src/server_functions.c head/server_functions.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile physics source
+$(OBJ_DIR)/physics-rules.o: src/physics-rules.c head/physics-rules.h | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Ensure obj directory exists
@@ -80,11 +87,11 @@ $(BIN_DIR):
 # Clean build artifacts
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -f $(CLIENT_BIN)
-	@echo "Trash ship client cleaned"
+	rm -f $(SERVER_BIN)
+	@echo "Universe server cleaned"
 
 # Clean everything including binary
 clean-all: clean
-	@echo "Trash ship client fully cleaned"
+	@echo "Universe server fully cleaned"
 
 .PHONY: all clean clean-all

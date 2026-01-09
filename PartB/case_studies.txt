@@ -1,2 +1,0 @@
-Porque a nave desconecta-se após estar com tecla premida em terminal velocity
-
