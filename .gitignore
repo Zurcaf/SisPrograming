@@ -6,6 +6,8 @@
 *.dll
 *.exe
 
+.vscode
+
 # Executáveis do projeto
 PartA/Trash-ship-simulator/universe-simulator
 PartA/Trash-ship-simulator/trash-ship-simulator
@@ -14,11 +16,15 @@ PartA/Universe-simulator/universe_simulator
 # PartB executables (centralizados em 0Executaveis)
 PartB/0Executaveis/universe-server
 PartB/0Executaveis/trash-ship-client
+PartB/0Executaveis/new-universe-server
+PartB/0Executaveis/new-trash-ship-client
 
 # Diretórios de build
 */obj/
 */build/
 */__pycache__/
+
+PartB/tools
 
 # Arquivos gerados por protobuf
 *.pb-c.c
